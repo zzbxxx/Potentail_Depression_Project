@@ -3,24 +3,12 @@
 ## Project Overview
 A web application designed to provide support and resources for potential depression sufferers, with initial focus on family-related issues.
 
-## Technology Stack
-
-### Frontend
-- **Framework**: Vue 3
-- **Language**: TypeScript
+### Frontend Stack
+- **Framework**: Vue 3 + H5
+- **Language**: Js + Ts (Part) 
 - **Styling**: CSS/Sass
 - **UI Components**: Element Plus
-
-### Backend
-- **Framework**: Spring Boot
-- **Language**: Java 17+
-
-### Database
-- **Primary**: MySQL 8.0
-
-### Infrastructure
-- **Containerization**: Docker
-- **CI/CD**: GitHub Actions
+- **animation**: Three.js + Canvas
 
 ## Current Features
 
@@ -33,15 +21,3 @@ A web application designed to provide support and resources for potential depres
 - Mood tracking interface
 - Dynamic visualization tools
 - Responsive design for all devices
-
-## Development Roadmap
-
-### Phase 1: Family Relationship Support (Current Focus)
-```mermaid
-graph TD
-    A[Family Issues Module] --> B[Conflict Resolution Tools]
-    A --> C[Communication Guides]
-    A --> D[Professional Referrals]
-    B --> B1[De-escalation Techniques]
-    C --> C1[Active Listening Exercises]
-    D --> D1[Therapist Matching]
