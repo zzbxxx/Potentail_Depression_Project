@@ -111,7 +111,6 @@ async function getCardInfo() {
   });
 }
 
-// 获取按钮的DOM元素
 const getButtonElement = async () => {
   if (!buttonRef.value) return null
   

@@ -30,9 +30,6 @@ class DeviceApiService {
         return await response.json();
     }
 
-    /**
-     * 生成设备指纹（私有方法）
-     */
     static async _generateDeviceFingerprint() {
         try {
             const hardwareData = {
@@ -44,10 +41,7 @@ class DeviceApiService {
                 deviceMemory: navigator.deviceMemory || 'unknown'
             };
 
-            // 添加Canvas指纹
             hardwareData.canvas = await this._getCanvasFingerprint();
-
-            // 生成哈希指纹
             const encoder = new TextEncoder();
             const data = encoder.encode(JSON.stringify(hardwareData));
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -60,7 +54,7 @@ class DeviceApiService {
     }
 
     /**
-     * 获取Canvas指纹（私有方法）
+     * 获取Canvas指纹
      */
     static async _getCanvasFingerprint() {
         try {

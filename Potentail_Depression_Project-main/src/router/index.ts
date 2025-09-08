@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import MainPage from '../views/MainPage.vue' // 其他页面组件
+import MainPage from '../views/MainPage.vue'
 
 const routes = [
     {
