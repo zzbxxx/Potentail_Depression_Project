@@ -155,7 +155,6 @@ onMounted(async () => {
 
 const toggleRecoveryCode = () => {
   showRecoveryCode.value = !showRecoveryCode.value
-  console.log(showRecoveryCode.value)
 }
 </script>
 

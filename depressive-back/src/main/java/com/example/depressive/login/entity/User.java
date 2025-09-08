@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
 
+// User.java
 @Entity
 @Table(name = "users")
 @Getter
@@ -23,43 +24,57 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true) // 移除 nullable = false，允许游客用户名为null
     private String username;
 
-    @Column(nullable = false, unique = true)
+    @Column(unique = true)
     private String phone;
 
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password_hash")
     private String passwordHash;
 
-    // 实现UserDetails接口方法
+    @Column(name = "is_guest", nullable = false)
+    private Boolean isGuest = true; // 添加是否为游客字段
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "device_info")
+    private String deviceInfo;
+
+    // 实现UserDetails接口方法需要调整
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return Collections.emptyList(); // 返回用户权限列表
+        return Collections.emptyList();
     }
 
     @Override
     public String getPassword() {
-        return passwordHash; // 返回加密后的密码
+        return passwordHash != null ? passwordHash : ""; // 处理null情况
+    }
+
+    @Override
+    public String getUsername() {
+        return username != null ? username : "guest_" + id; // 处理null情况
     }
 
     @Override
     public boolean isAccountNonExpired() {
-        return true; // 账户是否未过期
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return true; // 账户是否未锁定
+        return true;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return true; // 凭证是否未过期
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return true; // 账户是否启用
+        return true;
     }
 }

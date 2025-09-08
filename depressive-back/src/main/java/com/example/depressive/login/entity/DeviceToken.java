@@ -27,6 +27,10 @@ public class DeviceToken {
     @Column(updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-//    @Column(name = "used", columnDefinition = "boolean default false")
-//    private boolean used = false;
+    @Column(name = "user_id", nullable = false)
+    private Long userId;
+
+    @Column(name = "device_info")
+    private String deviceInfo;
+
 }

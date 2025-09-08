@@ -29,8 +29,8 @@ public class CardService {
     private final UserMoodLogRepository moodRepo;
     private final RedisTemplate<String, Object> redis;
 
-    public CardResp todayCard(Long userId) {
-        String key = "user:" + userId + ":card:recommendation";
+    public CardResp todayCard(Long userId, boolean isGuest) {
+        String key = "user:" + userId + ":card:recommendation" + (isGuest ? ":guest" : "user");
         CardResp cached = (CardResp) redis.opsForValue().get(key);
         System.out.println("cache:"+cached);
         if (cached != null) return cached;
@@ -57,6 +57,7 @@ public class CardService {
             System.out.println("有记录");
             selectedCard = recommendCardBasedOnMood(userId, active);
         }
+
 
         CardResp resp = new CardResp();
         BeanUtils.copyProperties(selectedCard, resp);

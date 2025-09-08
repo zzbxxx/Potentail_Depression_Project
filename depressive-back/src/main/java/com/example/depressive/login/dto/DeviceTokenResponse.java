@@ -11,4 +11,5 @@ public class DeviceTokenResponse {
     private String token;
     private LocalDateTime expiresAt;
     private boolean usedFingerprint;
+    private Long userId;
 }

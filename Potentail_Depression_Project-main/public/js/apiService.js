@@ -6,15 +6,16 @@ export default class DeviceApiService {
             const response = await fetch(`${this.BASE_URL}/guest-login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // 如果你把 token 放在响应体而非 Cookie，这里通常不需要 credentials
-                body: JSON.stringify({ newDeviceFingerprint })
+                body: JSON.stringify({
+                    newDeviceFingerprint,
+                    deviceInfo: `${navigator.userAgent} | ${screen.width}x${screen.height}`
+                })
             });
-
             if (!response.ok) {
                 const text = await response.text();
                 throw new Error(text || `游客登录失败 (${response.status})`);
             }
-            return await response.json(); // { tokenValue, expiresAt, usedFingerprint, [userId] }
+            return await response.json();
         } catch (e) {
             console.error('游客登录请求失败:', e);
             throw e;

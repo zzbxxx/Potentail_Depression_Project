@@ -16,19 +16,20 @@ public class DeviceController {
 
     @PostMapping("/guest-login")
     public ResponseEntity<DeviceTokenResponse> guestLogin(@RequestBody @Valid GuestLoginRequest request) {
-        DeviceToken token = authService.createGuestToken(request.getNewDeviceFingerprint());
+        System.out.println("request："+request.getNewDeviceFingerprint());
+        DeviceToken token = authService.createGuestToken(request.getNewDeviceFingerprint(),request.getDeviceInfo());
         boolean usedFingerprint = token.getFingerprintHash() != null;
         return ResponseEntity.ok(new DeviceTokenResponse(
                 token.getTokenValue(),
                 token.getExpiresAt(),
-                usedFingerprint
+                usedFingerprint,
+                token.getUserId()
         ));
     }
     @PostMapping("/register")
     public ResponseEntity<RecoveryCodeResponse> registerDevice(
             @RequestBody @Valid DeviceRegisterRequest request) {
 
-        System.out.println("request："+request);
         var code = authService.registerDevice(
                 request.getFingerprint(),
                 request.getDeviceInfo()
@@ -53,7 +54,8 @@ public class DeviceController {
         return ResponseEntity.ok(new DeviceTokenResponse(
                 token.getTokenValue(),
                 token.getExpiresAt(),
-                usedFingerprint
+                usedFingerprint,
+                token.getUserId()
         ));
     }
 }

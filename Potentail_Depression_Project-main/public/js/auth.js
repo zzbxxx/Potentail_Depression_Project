@@ -35,8 +35,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const result = await DeviceApiService.guestLogin(fingerprint);
             // result: { tokenValue, expiresAt, usedFingerprint, userId? }
             console.log("result" + JSON.stringify(result));
-
-            // 3) 保存到 localStorage（或 sessionStorage）
             localStorage.setItem('auth_token', result.token);
             localStorage.setItem('token_expires_at', result.expiresAt);
             if (result.userId) {

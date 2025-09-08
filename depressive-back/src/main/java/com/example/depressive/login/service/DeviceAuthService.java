@@ -2,10 +2,12 @@ package com.example.depressive.login.service;
 
 import com.example.depressive.login.entity.DeviceToken;
 import com.example.depressive.login.entity.RecoveryCode;
+import com.example.depressive.login.entity.User;
 import com.example.depressive.login.exception.ExpiredCodeException;
 import com.example.depressive.login.exception.InvalidCodeException;
 import com.example.depressive.login.repository.DeviceRepository;
 import com.example.depressive.login.repository.RecoveryCodeRepository;
+import com.example.depressive.login.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +25,7 @@ public class DeviceAuthService {
     private final RecoveryCodeRepository codeRepo;
     private final DeviceRepository deviceRepo;
     private final EncryptionService encryptionService;
-
+    private final UserRepository userRepository;
     public RecoveryCode registerDevice(String fingerprint, String deviceInfo) {
         RecoveryCode entity = new RecoveryCode();
 
@@ -41,9 +43,7 @@ public class DeviceAuthService {
     public DeviceToken verifyRecoveryCode(String code, String newFingerprint) {
 
         String codeHash = encryptionService.hash(code.trim());
-        System.out.println("Searching for code hash: " + codeHash);
 
-        // 修正查询方式
         RecoveryCode record = codeRepo.findByCodeHash(codeHash)
                 .orElseThrow(() -> {
                     System.out.println("Code not found for hash: " + codeHash);
@@ -84,13 +84,14 @@ public class DeviceAuthService {
                 .toString();
     }
 
-    public DeviceToken createGuestToken(String newFingerprint) {
+    public DeviceToken createGuestToken(String newFingerprint, String deviceInfo) {
         if (newFingerprint == null || newFingerprint.isBlank()) {
             throw new IllegalArgumentException("Fingerprint required");
         }
 
         // 1) 先算指纹哈希
         String fingerprintHash = encryptionService.hash(newFingerprint);
+        System.out.println("Fingerprint hash: " + fingerprintHash);
 
         // 2) 查是否已有未过期 token
         LocalDateTime now = LocalDateTime.now();
@@ -98,17 +99,37 @@ public class DeviceAuthService {
                 .findFirstByFingerprintHashAndExpiresAtAfterOrderByExpiresAtDesc(fingerprintHash, now);
 
         if (existing.isPresent()) {
-            // 直接返回已有 token
+            // 直接返回已有 token（包含 userId）
             return existing.get();
         }
 
-        // 3) 不存在则创建新 token
+        // 3) 创建游客用户
+        User guestUser = createGuestUser(deviceInfo); // 创建游客用户
+        System.out.println("guest:"+guestUser);
+        // 4) 创建设备 token 并关联用户ID
         DeviceToken token = new DeviceToken();
         token.setTokenValue(UUID.randomUUID().toString());
         token.setFingerprintHash(fingerprintHash);
         token.setExpiresAt(now.plusDays(30));
-        // token.setUserId(guestUserId);
-
+        token.setUserId(guestUser.getId()); // 关联用户ID
+        token.setDeviceInfo(deviceInfo);
         return deviceRepo.save(token);
+    }
+
+    // 创建游客用户的辅助方法
+    private User createGuestUser(String deviceInfo) {
+        User user = new User();
+        user.setIsGuest(true);
+        user.setUsername("Guest_" + generateGuestUsernameSuffix());
+        user.setIsGuest(false);
+        user.setDeviceInfo(deviceInfo);
+        // 显式刷新以确保获取生成的ID
+        user = userRepository.saveAndFlush(user);
+
+        System.out.println("用户创建成功，ID: " + user.getId());
+        return user;
+    }
+    private String generateGuestUsernameSuffix() {
+        return UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 }
