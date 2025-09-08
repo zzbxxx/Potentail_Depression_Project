@@ -1,0 +1,133 @@
+/* 认证页面样式 */
+.auth-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+
+}
+
+.auth-form {
+    background: rgba(26, 42, 108, 0.9);
+    padding: 3rem;
+    padding-right: 4rem;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 400px;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(74, 144, 226, 0.3);
+}
+
+.auth-tab h3 {
+    margin-bottom: 1.5rem;
+    color: #a0c4ff;
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: 500;
+}
+
+.input-field {
+    width: 100%;
+    padding: 1rem;
+    margin-bottom: 1.2rem;
+    border: 1px solid #3a5683;
+    border-radius: 8px;
+    background: rgba(16, 31, 63, 0.6);
+    color: #e0e0e0;
+    font-size: 1rem;
+    font-family: 'Noto Sans SC', sans-serif;
+    transition: all 0.3s ease;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #4a90e2;
+    box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.2);
+    background: rgba(16, 31, 63, 0.8);
+}
+
+.input-field::placeholder {
+    color: #6b7c9d;
+}
+
+.submit-btn {
+    background: linear-gradient(135deg, #4a6bff 0%, #3a56b3 100%);
+    color: white;
+    border: none;
+    padding: 1rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    font-family: 'Noto Sans SC', sans-serif;
+
+}
+
+.submit-btn:hover {
+    background: linear-gradient(135deg, #3a56b3 0%, #2a4290 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.submit-btn:active {
+    transform: translateY(0);
+}
+
+.action-tabs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    width: 90%;
+    max-width: 400px;
+}
+
+.tab-item {
+    opacity: 0.9;
+    padding: 0.9rem;
+    border-radius: 8px;
+    background: rgba(26, 42, 108, 0.6);
+    text-decoration: none;
+    color: #a0c4ff;
+    font-weight: 500;
+    text-align: center;
+    transition: all 0.3s ease;
+    border: 1px solid #3a5683;
+    cursor: pointer;
+    font-family: 'Noto Sans SC', sans-serif;
+}
+
+.tab-item:hover {
+    background: rgba(74, 107, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    color: #ffffff;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+    .auth-form {
+        padding: 1.5rem;
+        margin: 1rem;
+    }
+
+    .auth-tab h3 {
+        font-size: 1.3rem;
+    }
+
+    .input-field {
+        padding: 0.9rem;
+    }
+
+    .submit-btn {
+        padding: 0.9rem;
+    }
+}

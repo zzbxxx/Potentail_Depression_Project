@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>open-source-depressive</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/css/auth.css">
+    <link rel="stylesheet" href="/css/cross.css">
+    <style>
+        @import url(/css/index.css);
+    </style>
+</head>
+
+<body class="outer-body">
+    <div id="app">
+        <!-- 认证页面容器 -->
+        <div id="auth-container" class="auth-container" style="display: none;">
+            <div class="auth-form">
+                <div id="login-tab" class="auth-tab">
+                    <h3>账户登录</h3>
+                    <input id="login-username" type="text" placeholder="用户名/手机号" class="input-field">
+                    <input id="login-password" type="password" placeholder="密码" class="input-field">
+                    <button id="login-btn" class="submit-btn">登录</button>
+                </div>
+                <div id="register-tab" class="auth-tab" style="display: none;">
+                    <h3>新用户注册</h3>
+                    <input id="register-username" type="text" placeholder="设置用户名" class="input-field">
+                    <input id="register-phone" type="tel" placeholder="手机号" class="input-field">
+                    <input id="register-password" type="password" placeholder="设置密码" class="input-field">
+                    <button id="register-btn" class="submit-btn">注册</button>
+                </div>
+            </div>
+            <div class="action-tabs">
+                <a href="/index.html" class="tab-item">返回首页</a>
+                <a href="#" class="tab-item">忘记密码？</a>
+                <a id="toggle-tab" class="tab-item">没有账户？立即注册</a>
+            </div>
+        </div>
+        <!-- 原有的欢迎页面 -->
+        <div id="welcome" class="welcome">
+            <div class="login-buttons">
+                <a id="tourist_login" class="feature-card">
+                    <h3>游客登录</h3>
+                </a>
+                <a id="show-auth" href="#" class="feature-card">
+                    <h3>账户登录</h3>
+                </a>
+                <a id="cross-device-btn" class="feature-card">
+                    <h3>跨设备游客登录</h3>
+                </a>
+            </div>
+        </div>
+        <!-- 跨设备登录容器 -->
+        <div id="cross-device-login" class="cross-device-login" style="display: none;">
+            <div class="recovery-box">
+                <div class="prompt-text">输入您的找回码（剩余 <span id="attempts-left">5</span> 次机会）</div>
+                <input id="recovery-code" class="recovery-input" placeholder="请输入8位找回码" maxlength="8">
+                <button id="cross-submit-btn" class="cross-submit-btn">提交</button>
+            </div>
+            <a href="#" id="return-btn" class="return-card">
+                <h3>返回</h3>
+            </a>
+            <div id="error-toast" class="error-popup" style="display:none;">
+                <p id="error-text"></p>
+            </div>
+        </div>
+    </div>
+    <audio id="bg-music" loop>
+        <source src="/assets/sea/deep-sea-type-ambient-noise-loop_69bpm_F_major.wav" type="audio/wav">
+    </audio>
+    <audio id="bubble-sound1" preload="auto">
+        <source src="/assets/bubble/one_bubble_01.mp3" type="audio/mp3">
+    </audio>
+    <audio id="bubble-sound2" preload="auto">
+        <source src="/assets/bubble/two_bubble_01.mp3" type="audio/mp3">
+    </audio>
+    <audio id="many-bubbles-sound" preload="auto">
+        <source src="/assets/bubble/many_bubble.mp3" type="audio/mp3">
+    </audio>
+    <div id="bubble-container"></div>
+    <div id="audio-control" class="audio-control">
+        <div class="play-icon paused"></div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
+    <script src="/js/api.js"></script>
+    <script type="module" src="/js/auth.js"></script>
+    <script type="module" src="/js/crossLogin.js"></script>
+</body>
+
+</html>

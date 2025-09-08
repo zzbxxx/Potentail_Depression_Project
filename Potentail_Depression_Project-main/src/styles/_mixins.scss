@@ -1,0 +1,16 @@
+// src/styles/_mixins.scss
+
+// 示例混入
+@mixin flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+// 可以添加更多混入
+@mixin button-reset {
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+}

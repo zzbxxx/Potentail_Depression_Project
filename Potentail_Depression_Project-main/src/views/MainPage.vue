@@ -1,0 +1,266 @@
+<template>
+  <div class="MainPage">
+    <!-- 找回码组件 -->
+    <div class="edit-button-wrapper">
+      <el-button
+        ref="buttonRef"
+        type="primary"
+        :icon="Edit"
+        @click="toggleRecoveryCode"
+        class="deep-sea-btn"
+        v-if="isAccountLogin"
+      >
+        {{ showRecoveryCode ? '收起找回码' : '打开找回码' }}
+      </el-button>
+    </div>
+
+    <RecoveryCode
+      v-model="showRecoveryCode" 
+      :button-ref="buttonElement"
+     />
+
+    <el-button 
+      class="home-btn" 
+      type="primary" 
+      :icon="ArrowLeft" 
+      @click="goToHome"
+    >
+      首页
+    </el-button>
+  </div>
+
+  <CardGallery3D 
+    :cards="[
+      { id: 'today', title: '今日卡片', imageUrl: todayCardImage },
+      { id: 'anon', title: '匿名树洞', imageUrl: anonCardImage },
+      { id: 'progress', title: '小小进展', imageUrl: progressCardImage }
+    ]"
+    width="100%"
+    height="300px"
+    :responsive="true"
+    @select="handleCardSelect"
+    @resize="handleResize"
+  />
+
+  <card-popup
+    v-model="show"
+    :cover="demo.cover"
+    :title="demo.title"
+    :subtitle="demo.author"
+    :description="demo.desc"
+    primary-action-text="加入书单"
+    :submitting="submitting"
+    @primary="onAddToList"
+    @submit-mood="onSubmitMood"
+    @open="onOpen"
+    @close="onClose"
+  />
+
+  <el-button 
+    type="primary" 
+    class="deep-sea-action-btn"
+    @click="goToDateLog"
+  >
+    <span>时间日志</span>
+  </el-button>
+
+  <div style="background-color: aliceblue; width: 200px;" class="Emergency">
+    <HelpComponent/>
+  </div>
+</template>
+
+<script setup>
+import { ArrowLeft, Edit } from '@element-plus/icons-vue'
+import { onMounted, watch, nextTick, ref,reactive } from 'vue'
+import RecoveryCode from '../components/RecoveryCode.vue'
+import HelpComponent from '../components/HelpComponent.vue'
+import CardGallery3D from '../components/CardGallery3D.vue'
+import CardPopup from '../components/CardPopup.vue'
+import { useRouter } from 'vue-router'
+
+import MoodApiService from '../api/moodApi.js'
+
+import todayCardImage from '../assets/image/today-card.jpg'
+import anonCardImage from '../assets/image/anon-card.jpg'
+import progressCardImage from '../assets/image/progress-card.jpg'
+import { log } from 'three/src/nodes/TSL.js'
+const showRecoveryCode = ref(false)
+const buttonRef = ref(null)
+const buttonElement = ref(null)
+const clickCount = ref(0)
+const show = ref(false)
+const isAccountLogin = ref(true)
+const goToHome = () => {
+  window.location.href = '/'
+}
+
+const demo = reactive({
+  cover: '', 
+  title: '',
+  author: '',
+  desc: ''
+});
+
+async function getCardInfo() {
+  const { bookTitle, author, quoteText } = await MoodApiService.getToadyCard();
+  Object.assign(demo, {
+    cover: 'src/assets/image/FT.jpg',
+    title: bookTitle,
+    author,
+    desc: quoteText
+  });
+}
+
+// 获取按钮的DOM元素
+const getButtonElement = async () => {
+  if (!buttonRef.value) return null
+  
+  await nextTick()
+
+  return buttonRef.value.$el || buttonRef.value
+}
+
+function handleCardSelect(card, index) {
+  if (card.id === 'today') {
+    // 打开今日卡片
+    clickCount.value++
+    if (clickCount.value === 2) {
+      show.value = true
+      clickCount.value = 0
+    }
+  } else if (card.id === 'anon') {
+    // 打开树洞
+  } else if (card.id === 'progress') {
+    // 打开进展
+  }
+}
+
+// 修复watch函数
+watch([showRecoveryCode, buttonRef], async ([newShowVal, newButtonVal]) => {
+  if (newButtonVal) {
+    buttonElement.value = await getButtonElement()
+  }
+})
+
+// 组件挂载后获取按钮元素
+onMounted(async () => {
+  const token = localStorage.getItem("token")
+  if(token){
+    isAccountLogin.value = false
+  }
+  
+  await nextTick()
+  buttonElement.value = await getButtonElement();
+  getCardInfo();
+})
+
+const toggleRecoveryCode = () => {
+  showRecoveryCode.value = !showRecoveryCode.value
+  console.log(showRecoveryCode.value)
+}
+</script>
+
+<style scoped>
+.MainPage {
+  font-family: 'Arial', sans-serif;
+  color: #2C3E50;
+  height: 91vh;
+  margin: 0;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(135deg,
+      rgba(220, 229, 243, 0.9) 0%,
+      rgba(228, 232, 237, 0.9) 100%),
+    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="%23A3C1E0" stroke-width="0.5"/></svg>');
+  background-size: auto, 100px 100px;
+  background-attachment: fixed;
+  transition: all 0.5s ease;
+  line-height: 1.6;
+  position: relative;
+  overflow: hidden;
+}
+
+.edit-button-wrapper {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.deep-sea-btn {
+  background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e0f2fe;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.deep-sea-btn:hover {
+  background: linear-gradient(135deg, #0d2b4e 0%, #1a5f9c 100%);
+  transform: translateY(-2px);
+}
+
+.home-btn {
+    background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #e0f2fe;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    font-weight: 500;
+}
+
+.home-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* 暗色模式适配 */
+@media (prefers-color-scheme: dark) {
+  .MainPage {
+    background: linear-gradient(135deg,
+        rgba(30, 35, 41, 0.95) 0%,
+        rgba(44, 62, 80, 0.95) 100%),
+      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="%233a4a62" stroke-width="0.5"/></svg>');
+    color: #E0E0E0;
+  }
+}
+
+.deep-sea-action-btn {
+  position: fixed;
+  top: 6rem;
+  left: 1rem;
+  bottom: 0;
+  right: 0;
+  margin: auto;
+  background: linear-gradient(135deg, #1a5f9c 0%, #0d3b66 100%);
+  border: none;
+  color: #e0f2fe;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 0 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  font-size: 14px;
+  max-width: 120px;
+}
+
+.deep-sea-action-btn:hover {
+  background: linear-gradient(135deg, #0d3b66 0%, #1a5f9c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+</style>

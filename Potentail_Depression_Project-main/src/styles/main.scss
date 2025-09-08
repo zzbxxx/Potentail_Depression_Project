@@ -1,0 +1,40 @@
+// src/styles/main.scss
+@use 'variables' as *;
+@use 'mixins' as *;
+
+:root {
+    --primary: #{$primary};
+    --secondary: #{$secondary};
+    --text-color: #{$text-color};
+    --text-light: #{$text-light};
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+button {
+    padding: 0.5rem 1rem;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: $border-radius;
+    cursor: pointer;
+    transition: opacity 0.3s;
+
+    &:hover {
+        opacity: 0.9;
+    }
+
+    &:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+    }
+}

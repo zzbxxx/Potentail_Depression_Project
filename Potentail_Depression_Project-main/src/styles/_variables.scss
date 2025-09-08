@@ -1,0 +1,19 @@
+// src/styles/_variables.scss
+
+// 颜色变量（添加 !default 以便覆盖）
+$primary: #3498db !default;
+$secondary: #2ecc71 !default;
+$text-color: #333 !default;
+$text-light: #666 !default;
+
+// 间距变量
+$spacing-small: 0.5rem !default;
+$spacing-medium: 1rem !default;
+$spacing-large: 2rem !default;
+
+// 边框变量
+$border-radius: 4px !default;
+$border-color: #e0e0e0 !default;
+
+// 响应式断点
+$breakpoint-mobile: 768px !default;
