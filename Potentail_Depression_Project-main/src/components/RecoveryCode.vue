@@ -1,9 +1,5 @@
 <template>
   <div>
-    <div class="tip-popup" :class="{ show: isCopy }">
-      <div class="tip-content">已经复制找回码</div>
-    </div>
-    
     <teleport to="body">
       <div
         v-show="shouldShowContainer"
@@ -22,11 +18,17 @@
           </div>
           <div class="action-buttons">
             <button class="deep-sea-action-btn" id="screenshotBtn" @click="takeScreenshot">截图保存</button>
-            <button class="deep-sea-action-btn" id="copyBtn" @click="copyToClipboard">复制到剪贴板</button>
+            <button class="deep-sea-action-btn" id="copyBtn" @click="copyAndShowTip">复制到剪贴板</button>
           </div>
         </div>
       </div>
     </teleport>
+    <messageTip
+      :message="tipMessage"
+      :trigger="showTrigger"
+      :background-color="tipBackgroundColor"
+      :text-color="tipTextColor"
+    />
   </div>
 </template>
 
@@ -37,7 +39,7 @@ import useParabolaAnimation from '/src/composables/useParabolaAnimation'
 import html2canvas from 'html2canvas'
 // @ts-ignore
 import DeviceApiService  from '../api/apiService'
-
+import messageTip from './tip/messageTip.vue'
 interface Props {
   modelValue?: boolean
   buttonRef?: HTMLElement | null
@@ -53,13 +55,16 @@ const pageTitle = ref('跨设备登录模式')
 const remainingAttempts = ref(3)
 const recoveryCode = ref('xxxxxxx')
 const showCodeSection = ref(false)
-const isCopy = ref(false)
 
 // 动画相关
 const containerRef = ref<HTMLElement | null>(null)
 const shouldShowContainer = ref(false)
 
-// 使用抛物线动画hook - 修改配置
+const tipMessage = ref('复制成功！')
+const showTrigger = ref(false)
+const tipBackgroundColor = ref('rgba(88, 172, 209, 0.9)')
+const tipTextColor = ref('#ffffff')
+
 const { style: animationStyle, animateHide, animateShow, isAnimating } = useParabolaAnimation({
   scale: 0.5, 
   duration: 500, 
@@ -119,13 +124,9 @@ const hide = async () => {
       })
     } catch (error) {
       console.error('抛物线动画错误:', error)
-      // 如果抛物线动画失败，使用简单的淡出效果
-     
     }
   } else {
     console.log('Button ref not valid, using simple animation')
-    // 如果没有按钮引用，使用简单的淡出效果
-
   }
 }
 
@@ -144,7 +145,6 @@ const handleClickOutside = (event: MouseEvent) => {
   if (containerRef.value && 
       !containerRef.value.contains(event.target as Node) && 
       shouldShowContainer.value) {
-    // 这里可以添加关闭逻辑
   }
 }
 
@@ -183,7 +183,12 @@ const takeScreenshot = async () => {
     const element = containerRef.value;
     
     if (!element) {
-      alert('找不到要截图的内容');
+      tipBackgroundColor.value = 'rgba(220, 53, 69, 0.9)' // 失败时红色
+      tipTextColor.value = '#ffffff'
+      showTrigger.value = true
+      setTimeout(() => {
+        showTrigger.value = false
+      }, 50)
       return;
     }
 
@@ -198,30 +203,47 @@ const takeScreenshot = async () => {
     link.download = '找回码截图.png';
     link.href = canvas.toDataURL('image/png');
     link.click();
+    tipMessage.value = '复制成功！'
+    tipBackgroundColor.value = 'rgba(88, 172, 209, 0.9)' // 成功时绿色
+    tipTextColor.value = '#ffffff'
+    showTrigger.value = true
+    setTimeout(() => {
+      showTrigger.value = false
+    }, 50)
     
   } catch (error) {
     console.error('截图失败:', error);
-    alert('截图失败，请重试');
+    tipBackgroundColor.value = 'rgba(220, 53, 69, 0.9)' // 失败时红色
+    tipTextColor.value = '#ffffff'
+    showTrigger.value = true
+    setTimeout(() => {
+      showTrigger.value = false
+    }, 50)
   }
 };
 
-const copyToClipboard = async () => {
-  if (!recoveryCode.value || recoveryCode.value === 'xxxxxxx') {
-    alert('请先生成有效的找回码')
-    return
-  }
+const copyAndShowTip = async () => {
   try {
     await navigator.clipboard.writeText(recoveryCode.value)
-    isCopy.value = true
+    tipMessage.value = '复制成功！'
+    tipBackgroundColor.value = 'rgba(88, 172, 209, 0.9)' // 成功时绿色
+    tipTextColor.value = '#ffffff'
+    showTrigger.value = true
     setTimeout(() => {
-      isCopy.value = false
-    }, 1500)
+      showTrigger.value = false
+    }, 50)
   } catch (error) {
     console.error('复制失败', error)
+    tipMessage.value = '复制失败'
+    tipBackgroundColor.value = 'rgba(220, 53, 69, 0.9)' // 失败时红色
+    tipTextColor.value = '#ffffff'
+    showTrigger.value = true
+    setTimeout(() => {
+      showTrigger.value = false
+    }, 50)
   }
-};
+}
 
-// 暴露方法给父组件
 defineExpose({
   show,
   hide

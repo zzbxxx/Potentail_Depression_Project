@@ -23,4 +23,16 @@ export default class MoodApiService {
 
         return response.json();
     }
+
+    static async getMoodHistoryInfo() {
+        let userId = localStorage.getItem("userId") || localStorage.getItem("user_id")
+
+        const res = await fetch(`${this.BASE_URL}/history?userId=${userId}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        })
+
+        return res.json();
+
+    }
 }

@@ -14,6 +14,18 @@
       </el-button>
     </div>
 
+
+      <el-button 
+        type="primary" 
+        class="deep-sea-action-btn"
+        @click="goToDateLog"
+        :icon="Clock " 
+      >
+        <span>
+          时间日志
+        </span>
+      </el-button>
+
     <RecoveryCode
       v-model="showRecoveryCode" 
       :button-ref="buttonElement"
@@ -39,7 +51,6 @@
     height="300px"
     :responsive="true"
     @select="handleCardSelect"
-    @resize="handleResize"
   />
 
   <card-popup
@@ -48,29 +59,22 @@
     :title="demo.title"
     :subtitle="demo.author"
     :description="demo.desc"
-    primary-action-text="加入书单"
+    :primary-action-text="primaryActionText"
     :submitting="submitting"
+    :default-mood="popupModel"
     @primary="onAddToList"
     @submit-mood="onSubmitMood"
     @open="onOpen"
     @close="onClose"
   />
 
-  <el-button 
-    type="primary" 
-    class="deep-sea-action-btn"
-    @click="goToDateLog"
-  >
-    <span>时间日志</span>
-  </el-button>
-
   <div style="background-color: aliceblue; width: 200px;" class="Emergency">
-    <HelpComponent/>
+    <HelpComponent />
   </div>
 </template>
 
 <script setup>
-import { ArrowLeft, Edit } from '@element-plus/icons-vue'
+import { ArrowLeft, Edit ,Clock  } from '@element-plus/icons-vue'
 import { onMounted, watch, nextTick, ref,reactive } from 'vue'
 import RecoveryCode from '../components/RecoveryCode.vue'
 import HelpComponent from '../components/HelpComponent.vue'
@@ -90,6 +94,7 @@ const buttonElement = ref(null)
 const clickCount = ref(0)
 const show = ref(false)
 const isAccountLogin = ref(true)
+const submitting = ref(false)
 const goToHome = () => {
   window.location.href = '/'
 }
@@ -100,6 +105,42 @@ const demo = reactive({
   author: '',
   desc: ''
 });
+
+async function onSubmitMood(payload) {
+
+  submitting.value = true
+  console.log(payload);
+  
+  try {
+    await MoodApiService.submitMood(payload)
+    ElMessage.success('心情分享成功，谢谢你～')
+    show.value = false
+  } catch (error) {
+    console.log(error);
+    
+    ElMessage.error('分享失败，稍后再试吧～')
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function onAddToList() {
+  submitting.value = true
+  try {
+    await MoodApiService.addToList(demo.title, demo.author)
+    ElMessage.success('已成功加入书单')
+  } catch (error) {
+    ElMessage.error('加入书单失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+const router = useRouter()
+async function goToDateLog(){
+  const info = await MoodApiService.getMoodHistoryInfo();
+  router.push('/mood-log')
+}
 
 async function getCardInfo() {
   const { bookTitle, author, quoteText } = await MoodApiService.getToadyCard();
@@ -198,6 +239,10 @@ const toggleRecoveryCode = () => {
   padding: 10px 20px;
   border-radius: 6px;
   font-size: 14px;
+  position: relative;
+  top: 8rem;
+  left: 0.2rem;
+  padding: 1rem;
 }
 
 .deep-sea-btn:hover {
@@ -238,7 +283,7 @@ const toggleRecoveryCode = () => {
 
 .deep-sea-action-btn {
   position: fixed;
-  top: 6rem;
+  top: 4rem;
   left: 1rem;
   bottom: 0;
   right: 0;

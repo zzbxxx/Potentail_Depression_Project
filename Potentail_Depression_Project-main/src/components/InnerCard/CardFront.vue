@@ -24,13 +24,12 @@
 
     <footer class="card-footer">
       <el-button
-        v-if="primaryActionText"
         type="primary"
         size="small"
         class="calm-btn"
         @click="$emit('primary')"
       >
-        {{ primaryActionText }}
+        收藏起来
       </el-button>
       <el-button size="small" class="ghost-btn" @click="$emit('close')">
         我先休息一下

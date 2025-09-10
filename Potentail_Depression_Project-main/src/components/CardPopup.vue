@@ -18,7 +18,7 @@
             <el-icon><Close /></el-icon>
           </el-button>
         </el-tooltip>
-        <el-tooltip placement="right">
+        <el-tooltip placement="right" :content="isFlipped ? '查看封面' : '记录心情'">
           <el-button
             class="flip-btn el-icon-btn"
             circle
@@ -46,7 +46,6 @@
             <CardBack
               v-model="moodState"
               :submitting="submitting"
-              :groups="moodGroups"
               @submit="onSubmitMood"
               @close="close"
             />
@@ -63,15 +62,10 @@ import CardFront from './InnerCard/CardFront.vue'
 import CardBack from './InnerCard/CardBack.vue'
 import { ElButton, ElTooltip } from 'element-plus'
 import { Close, Memo, Collection } from '@element-plus/icons-vue'
+
 interface MoodState {
-  main?: string
-  sub?: string
+  mood?: string
   text?: string
-}
-interface MoodGroup {
-  key: string
-  label: string
-  children: { key: string; label: string; tags: string[] }[]
 }
 
 interface Props {
@@ -86,9 +80,9 @@ interface Props {
   theme?: 'light' | 'dark' | 'calm'
   modelValue?: boolean
   submitting?: boolean
-  moodGroups?: MoodGroup[]
   defaultMood?: MoodState
 }
+
 const props = withDefaults(defineProps<Props>(), {
   cover: '',
   coverAlt: '',
@@ -101,7 +95,7 @@ const props = withDefaults(defineProps<Props>(), {
   theme: 'calm',
   modelValue: false,
   submitting: false,
-  defaultMood: () => ({ main: 'positive', sub: 'calm', text: '' })
+  defaultMood: () => ({ mood: 'happy', text: '' })
 })
 
 const emit = defineEmits<{
@@ -109,7 +103,7 @@ const emit = defineEmits<{
   (e: 'open'): void
   (e: 'close'): void
   (e: 'primary'): void
-  (e: 'submit-mood', payload: { main: string; sub: string; text: string }): void
+  (e: 'submit-mood', payload: { mood: string; text: string }): void
 }>()
 
 const innerVisible = ref<boolean>(props.modelValue)
@@ -140,16 +134,14 @@ function toggleFlip() {
 }
 
 const moodState = ref<MoodState>({ ...props.defaultMood })
-function onSubmitMood(payload: { main: string; sub: string; text: string }) {
+function onSubmitMood(payload: { mood: string; text: string }) {
   emit('submit-mood', payload)
 }
 
-const moodGroups = computed(() => props.moodGroups)
 const submitting = computed(() => props.submitting)
 </script>
 
 <style scoped>
-/* 遮罩层 */
 .overlay {
   position: fixed;
   inset: 0;
@@ -160,7 +152,6 @@ const submitting = computed(() => props.submitting)
   z-index: 23000;
 }
 
-/* 容器 */
 .card-container {
   width: v-bind(width);
   max-width: v-bind(maxWidth);
@@ -170,7 +161,6 @@ const submitting = computed(() => props.submitting)
   top: -10%;
 }
 
-/* 关闭按钮 */
 .close-btn {
   position: absolute;
   top: -12px;
@@ -188,7 +178,6 @@ const submitting = computed(() => props.submitting)
   z-index: 1;
 }
 
-/* 翻转按钮 */
 .flip-btn {
   position: absolute;
   top: 50%;
@@ -206,19 +195,7 @@ const submitting = computed(() => props.submitting)
   transition: transform 0.5s;
   z-index: 1;
 }
-/* .flip-btn:hover {
-  transform: translateY(-50%) rotate(90deg) scale(1.1);
-} */
 
-.bookmark-content {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  font-size: 14px;
-}
-
-/* 翻转包装 */
 .flip-wrapper {
   position: relative;
   transform-style: preserve-3d;
@@ -237,7 +214,6 @@ const submitting = computed(() => props.submitting)
   transform: rotateY(180deg);
 }
 
-/* 进场动画 */
 .card-zoom-rotate-enter-from .card-container {
   transform: scale(0.86) rotate(-3deg) translateY(10px);
   opacity: 0;

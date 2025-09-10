@@ -9,7 +9,6 @@
 import { onMounted, onBeforeUnmount, ref, watch, nextTick, computed } from 'vue'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-// src\assets\image\anon-card.jpg
 import todayCardImage from '../assets/image/today-card.jpg'
 import anonCardImage from '../assets/image/anon-card.jpg'
 import progressCardImage from '../assets/image/progress-card.jpg'
@@ -30,8 +29,8 @@ const props = withDefaults(defineProps<{
   radius?: number
   enableControls?: boolean
   initialIndex?: number
-  responsive?: boolean // 新增：是否启用响应式
-  breakpoints?: { // 新增：断点配置
+  responsive?: boolean
+  breakpoints?: {
     sm?: number
     md?: number
     lg?: number
@@ -48,10 +47,10 @@ const props = withDefaults(defineProps<{
   initialIndex: 0,
   responsive: true,
   breakpoints: () => ({
-    sm: 640,    // 小屏幕
-    md: 768,    // 中等屏幕
-    lg: 1024,   // 大屏幕
-    xl: 1280    // 超大屏幕
+    sm: 640,
+    md: 768,
+    lg: 1024,
+    xl: 1280
   })
 })
 
@@ -64,11 +63,9 @@ const containerRef = ref<HTMLDivElement | null>(null)
 const carouselRef = ref<HTMLDivElement | null>(null)
 const isInitialized = ref(false)
 
-// 响应式尺寸
 const containerSize = ref({ width: 0, height: 0 })
-const screenSize = ref({ width: window.innerWidth, height: window.innerHeight })
 
-// 计算响应式参数
+// 计算响应式参数：以容器宽度为依据
 const responsiveParams = computed(() => {
   if (!props.responsive) {
     return {
@@ -78,25 +75,34 @@ const responsiveParams = computed(() => {
       spacing: props.spacing
     }
   }
-
   const { sm, md, lg, xl } = props.breakpoints
-  const width = screenSize.value.width
+  const width = containerSize.value.width || 0
 
+  if (width === 0) {
+    return {
+      cardWidth: props.cardWidth,
+      cardHeight: props.cardHeight,
+      radius: props.radius,
+      spacing: props.spacing
+    }
+  }
+
+  // 更平滑的响应式计算
   if (width < sm!) {
     // 超小屏幕
     return {
-      cardWidth: props.cardWidth * 0.7 * 0.7,
-      cardHeight: props.cardHeight * 0.7 * 0.7,
-      radius: props.radius * 0.8 * 0.7,
-      spacing: props.spacing * 0.8 * 0.7
+      cardWidth: props.cardWidth * 0.6,
+      cardHeight: props.cardHeight * 0.6,
+      radius: props.radius * 0.7,
+      spacing: props.spacing * 0.7
     }
   } else if (width < md!) {
     // 小屏幕
     return {
-      cardWidth: props.cardWidth * 0.8,
-      cardHeight: props.cardHeight * 0.8,
-      radius: props.radius * 0.9,
-      spacing: props.spacing * 0.9
+      cardWidth: props.cardWidth * 0.75,
+      cardHeight: props.cardHeight * 0.75,
+      radius: props.radius * 0.85,
+      spacing: props.spacing * 0.85
     }
   } else if (width < lg!) {
     // 中等屏幕
@@ -106,13 +112,21 @@ const responsiveParams = computed(() => {
       radius: props.radius,
       spacing: props.spacing
     }
-  } else {
+  } else if (width < xl!) {
     // 大屏幕
     return {
       cardWidth: props.cardWidth * 1.1,
       cardHeight: props.cardHeight * 1.1,
       radius: props.radius * 1.1,
       spacing: props.spacing * 1.1
+    }
+  } else {
+    // 超大屏幕
+    return {
+      cardWidth: props.cardWidth * 1.25,
+      cardHeight: props.cardHeight * 1.25,
+      radius: props.radius * 1.25,
+      spacing: props.spacing * 1.25
     }
   }
 })
@@ -131,57 +145,66 @@ let cardMeshes: THREE.Mesh[] = []
 let cardTargets: { position: THREE.Vector3; rotationY: number }[] = []
 let selectedIndex = props.initialIndex
 
-// 纹理加载器
+// 纹理加载器与缓存
 const textureLoader = new THREE.TextureLoader()
-// 存储已加载的纹理
 const loadedTextures = new Map<string, THREE.Texture>()
 
-// 预定义的图片映射
+// 预定义图片映射
 const cardImageMap: Record<string, string> = {
-  'today': todayCardImage,
-  'anon': anonCardImage,
-  'progress': progressCardImage
-}
-
-// 监听窗口大小变化
-const handleWindowResize = () => {
-  screenSize.value = {
-    width: window.innerWidth,
-    height: window.innerHeight
-  }
-  updateContainerSize()
+  today: todayCardImage,
+  anon: anonCardImage,
+  progress: progressCardImage
 }
 
 // 更新容器尺寸
 const updateContainerSize = () => {
   if (!containerRef.value) return
-  
+  const rect = containerRef.value.getBoundingClientRect()
   const computedStyle = getComputedStyle(containerRef.value)
   const paddingX = parseFloat(computedStyle.paddingLeft) + parseFloat(computedStyle.paddingRight)
   const paddingY = parseFloat(computedStyle.paddingTop) + parseFloat(computedStyle.paddingBottom)
-  
-  const newWidth = Math.max(100, containerRef.value.clientWidth - paddingX)
-  const newHeight = Math.max(100, containerRef.value.clientHeight - paddingY)
-  
+
+  const newWidth = Math.max(100, Math.floor(rect.width - paddingX))
+  const newHeight = Math.max(100, Math.floor(rect.height - paddingY))
+
   if (newWidth !== containerSize.value.width || newHeight !== containerSize.value.height) {
     containerSize.value = { width: newWidth, height: newHeight }
     emit('resize', containerSize.value)
-    handleResize()
   }
 }
 
-// 创建观察器监听容器大小变化
+const applyResize = async () => {
+  if (!renderer || !camera) return
+  if (containerSize.value.width <= 0 || containerSize.value.height <= 0) return
+
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setSize(containerSize.value.width, containerSize.value.height, false)
+  camera.aspect = containerSize.value.width / containerSize.value.height
+  camera.updateProjectionMatrix()
+
+  // 重建卡片以响应尺寸变化
+  await createCards()
+}
+
+// ResizeObserver
 let resizeObserver: ResizeObserver | null = null
+let resizeRAF = 0
+const onObservedResize: ResizeObserverCallback = () => {
+  if (resizeRAF) cancelAnimationFrame(resizeRAF)
+  resizeRAF = requestAnimationFrame(async () => {
+    updateContainerSize()
+    await applyResize()
+  })
+}
 
 function createRenderer(target: HTMLElement) {
   if (renderer) {
     renderer.dispose()
   }
-  
-  renderer = new THREE.WebGLRenderer({ 
-    antialias: true, 
+  renderer = new THREE.WebGLRenderer({
+    antialias: true,
     alpha: true,
-    powerPreference: "high-performance"
+    powerPreference: 'high-performance'
   })
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
   renderer.setSize(containerSize.value.width, containerSize.value.height, false)
@@ -197,8 +220,7 @@ function getAdaptiveRadius(count: number, angleStep: number) {
 
 function createSceneCamera() {
   scene = new THREE.Scene()
-  
-  // 灯光设置
+
   const ambientLight = new THREE.AmbientLight(0xccccff, 0.6)
   scene.add(ambientLight)
 
@@ -216,7 +238,7 @@ function createSceneCamera() {
 
   camera = new THREE.PerspectiveCamera(
     35,
-    containerSize.value.width / containerSize.value.height,
+    Math.max(1, containerSize.value.width) / Math.max(1, containerSize.value.height),
     0.1,
     100
   )
@@ -226,10 +248,8 @@ function createSceneCamera() {
 
 function createControls() {
   if (!renderer || !camera) return
-  if (controls) {
-    controls.dispose()
-  }
-  
+  if (controls) controls.dispose()
+
   controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
   controls.enabled = !!props.enableControls
@@ -240,14 +260,13 @@ function createControls() {
   controls.maxPolarAngle = Math.PI / 1.6
 }
 
-// 加载图片纹理
+// 纹理加载
 async function loadCardTexture(cardId: string, imageUrl: string): Promise<THREE.Texture> {
   return new Promise((resolve, reject) => {
     if (loadedTextures.has(cardId)) {
       resolve(loadedTextures.get(cardId)!)
       return
     }
-
     textureLoader.load(
       imageUrl,
       (texture) => {
@@ -269,13 +288,9 @@ async function loadCardTexture(cardId: string, imageUrl: string): Promise<THREE.
 async function createCardMaterial(card: Card): Promise<THREE.Material> {
   try {
     const imageUrl = card.imageUrl || cardImageMap[card.id] || ''
-    
-    if (!imageUrl) {
-      throw new Error(`No image found for card ${card.id}`)
-    }
+    if (!imageUrl) throw new Error(`No image found for card ${card.id}`)
 
     const texture = await loadCardTexture(card.id.toString(), imageUrl)
-    
     return new THREE.MeshPhysicalMaterial({
       map: texture,
       transparent: true,
@@ -286,7 +301,7 @@ async function createCardMaterial(card: Card): Promise<THREE.Material> {
       clearcoatRoughness: 0.1,
       side: THREE.FrontSide,
       thickness: 0.1,
-      transmission: 0.05,
+      transmission: 0.05
     })
   } catch (error) {
     console.error('Error creating card material:', error)
@@ -298,40 +313,46 @@ async function createCardMaterial(card: Card): Promise<THREE.Material> {
   }
 }
 
-// 创建卡片
+let planeGeometry: THREE.PlaneGeometry | null = null
 async function createCards() {
   if (!scene) return
-  
-  // 清理旧卡片
+
+  // 删除旧网格
   cardMeshes.forEach(m => {
     scene!.remove(m)
     m.geometry.dispose()
-    Array.isArray(m.material)
-      ? m.material.forEach(mat => mat.dispose?.())
-      : (m.material as THREE.Material).dispose?.()
+    const mat = m.material
+    if (Array.isArray(mat)) mat.forEach(mm => mm.dispose?.())
+    else (mat as THREE.Material).dispose?.()
   })
   cardMeshes = []
   cardTargets = []
 
-  const geometry = new THREE.PlaneGeometry(
-    responsiveParams.value.cardWidth, 
+  // 检查 props.cards 是否存在且有内容
+  if (!props.cards || !Array.isArray(props.cards) || props.cards.length === 0) {
+    console.warn('No cards data available')
+    return
+  }
+
+  // 重建几何体
+  if (planeGeometry) {
+    planeGeometry.dispose()
+    planeGeometry = null
+  }
+  planeGeometry = new THREE.PlaneGeometry(
+    responsiveParams.value.cardWidth,
     responsiveParams.value.cardHeight
   )
-  const count = Math.max(1, props.cards.length)
 
-  // 均分角度
+  const count = Math.max(1, props.cards.length)
   const angleStep = (Math.PI * 2) / count
   const radius = getAdaptiveRadius(count, angleStep)
 
-  // 创建所有卡片的材质
-  const materialPromises = props.cards.map(card => createCardMaterial(card))
-  const materials = await Promise.all(materialPromises)
+  const materials = await Promise.all(props.cards.map(card => createCardMaterial(card)))
 
   for (let i = 0; i < count; i++) {
     const card = props.cards[i]
-    const material = materials[i]
-
-    const mesh = new THREE.Mesh(geometry, material)
+    const mesh = new THREE.Mesh(planeGeometry, materials[i])
     mesh.name = `card-${card.id}`
     mesh.userData = { index: i, card }
 
@@ -345,16 +366,10 @@ async function createCards() {
 
     scene!.add(mesh)
     cardMeshes.push(mesh)
-
-    const target = {
+    cardTargets.push({
       position: new THREE.Vector3(x, 0, z),
       rotationY: mesh.rotation.y
-    }
-    cardTargets.push(target)
-  }
-
-  if(renderer && scene && camera){
-    renderer.render(scene, camera)
+    })
   }
 }
 
@@ -408,11 +423,11 @@ function animateTransform(
   function tick(now: number) {
     const p = Math.min(1, (now - start) / duration)
     const e = easeOutQuart(p)
-    
+
     mesh.position.lerpVectors(fromPos, toPos, e)
     mesh.rotation.y = fromRotY + (toRotY - fromRotY) * e
     mesh.position.y = Math.sin(p * Math.PI) * 0.1
-    
+
     if (p < 1) {
       requestAnimationFrame(tick)
     } else {
@@ -447,90 +462,53 @@ function animate() {
   renderer.render(scene, camera)
 }
 
-let resizeTimeout: number | null = null
-
-function handleResize() {
-  if (!renderer || !camera || !containerRef.value) return
-  
-  if (resizeTimeout) {
-    clearTimeout(resizeTimeout)
-  }
-  
-  resizeTimeout = setTimeout(() => {
-    updateContainerSize()
-    
-    if (renderer && containerSize.value.width > 0 && containerSize.value.height > 0) {
-      renderer.setSize(containerSize.value.width, containerSize.value.height, false)
-      camera!.aspect = containerSize.value.width / containerSize.value.height
-      camera!.updateProjectionMatrix()
-      
-      if (controls) {
-        controls.update()
-      }
-      
-      // 重新创建卡片以适应新的尺寸
-      createCards().then(() => {
-        if (renderer && scene && camera) {
-          renderer.render(scene, camera)
-        }
-      })
-    }
-    
-    resizeTimeout = null
-  }, 100) as unknown as number
-}
-
+// 组件挂载
 onMounted(async () => {
   await nextTick()
-  
-  if (!containerRef.value) return
-  
-  // 设置初始尺寸
+  if (!containerRef.value || !carouselRef.value) return
+
+  // 初次计算一次
   updateContainerSize()
-  
-  // 监听窗口大小变化
-  window.addEventListener('resize', handleWindowResize)
-  
-  // 使用 ResizeObserver 监听容器大小变化
-  resizeObserver = new ResizeObserver(handleResize)
+
+  createRenderer(carouselRef.value)
+  createSceneCamera()
+  createControls()
+  raycaster = new THREE.Raycaster()
+  mouse = new THREE.Vector2()
+
+  // 观察容器尺寸
+  resizeObserver = new ResizeObserver(onObservedResize)
   resizeObserver.observe(containerRef.value)
 
-  if (carouselRef.value) {
-    createRenderer(carouselRef.value)
-    createSceneCamera()
-    createControls()
-
-    raycaster = new THREE.Raycaster()
-    mouse = new THREE.Vector2()
-
-    await createCards()
-
+  // 等待一帧，确保有实际尺寸
+  requestAnimationFrame(async () => {
+    updateContainerSize()
+    await applyResize()
     if (renderer) {
       renderer.domElement.addEventListener('click', onClick)
     }
-
     animate()
     isInitialized.value = true
-  }
+  })
+
+  // 移动端方向变更兜底
+  window.addEventListener('orientationchange', () => {
+    requestAnimationFrame(async () => {
+      updateContainerSize()
+      await applyResize()
+    })
+  }, { passive: true })
 })
 
+// 卸载清理
 onBeforeUnmount(() => {
-  // 移除事件监听器
-  window.removeEventListener('resize', handleWindowResize)
-  
   if (resizeObserver) {
     resizeObserver.disconnect()
     resizeObserver = null
   }
-  
   if (renderer) {
     renderer.domElement.removeEventListener('click', onClick)
   }
-  
-  if (resizeTimeout) {
-    clearTimeout(resizeTimeout)
-  }
-  
   if (frameId) cancelAnimationFrame(frameId)
 
   // 释放资源
@@ -541,14 +519,14 @@ onBeforeUnmount(() => {
     else (mat as THREE.Material).dispose?.()
   })
   cardMeshes = []
-  
+
   controls?.dispose()
   renderer?.dispose()
-  
+
   if (renderer && renderer.domElement.parentElement) {
     renderer.domElement.parentElement.removeChild(renderer.domElement)
   }
-  
+
   renderer = null
   scene = null
   camera = null
@@ -556,27 +534,24 @@ onBeforeUnmount(() => {
   mouse = null
 })
 
-// 监听响应式参数变化
+// 响应式变更与数据变更
 watch(responsiveParams, async () => {
   if (isInitialized.value) {
     await createCards()
   }
 }, { deep: true })
 
-watch(
-  () => props.cards,
-  async () => {
-    if (isInitialized.value) {
-      await createCards()
-    }
-  },
-  { deep: true }
-)
+watch(() => props.cards, async () => {
+  if (isInitialized.value) {
+    await createCards()
+  }
+}, { deep: true })
 
 watch(
   () => props.initialIndex,
   v => {
-    focusToIndex(Math.min(Math.max(0, v), props.cards.length - 1), true)
+    const idx = Math.min(Math.max(0, v), props.cards.length - 1)
+    focusToIndex(idx, true)
   }
 )
 </script>
@@ -603,11 +578,10 @@ watch(
   border-radius: 12px;
 }
 
-/* 响应式媒体查询 */
+/* 小屏时去掉 transform，避免测量抖动 */
 @media (max-width: 640px) {
   .three-card-carousel-container {
-    min-width: 150px;
-    min-height: 210px;
+    transform: none;
   }
 }
 
@@ -615,7 +589,6 @@ watch(
   .three-card-carousel-container {
     min-width: 120px;
     min-height: 180px;
-    
   }
 }
 

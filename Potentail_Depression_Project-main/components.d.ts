@@ -28,6 +28,7 @@ declare module 'vue' {
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     HelpComponent: typeof import('./src/components/HelpComponent.vue')['default']
     'HelpComponent.': typeof import('./src/components/HelpComponent..vue')['default']
+    MessageTip: typeof import('./src/components/tip/messageTip.vue')['default']
     RecoveryCode: typeof import('./src/components/RecoveryCode.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
