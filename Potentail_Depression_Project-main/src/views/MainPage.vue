@@ -63,7 +63,6 @@
     :submitting="submitting"
     :default-mood="popupModel"
     @primary="onAddToList"
-    @submit-mood="onSubmitMood"
     @open="onOpen"
     @close="onClose"
   />
@@ -106,24 +105,6 @@ const demo = reactive({
   desc: ''
 });
 
-async function onSubmitMood(payload) {
-
-  submitting.value = true
-  console.log(payload);
-  
-  try {
-    await MoodApiService.submitMood(payload)
-    ElMessage.success('心情分享成功，谢谢你～')
-    show.value = false
-  } catch (error) {
-    console.log(error);
-    
-    ElMessage.error('分享失败，稍后再试吧～')
-  } finally {
-    submitting.value = false
-  }
-}
-
 async function onAddToList() {
   submitting.value = true
   try {
@@ -135,10 +116,14 @@ async function onAddToList() {
     submitting.value = false
   }
 }
-
 const router = useRouter()
-async function goToDateLog(){
-  const info = await MoodApiService.getMoodHistoryInfo();
+async function goToDateLog() {
+  try {
+    const info = await MoodApiService.getMoodHistoryInfo()
+  } catch (error) {
+    console.error('API failed:', error)
+    ElMessage.error('获取日志数据失败，请稍后再试')
+  }
   router.push('/mood-log')
 }
 

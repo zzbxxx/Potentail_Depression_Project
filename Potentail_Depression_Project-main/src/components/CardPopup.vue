@@ -8,7 +8,7 @@
       aria-modal="true"
     >
       <div class="card-container">
-        <el-tooltip placement="bottom">
+        <el-tooltip placement="bottom" content="">
           <el-button
             class="close-btn el-icon-btn"
             circle
@@ -46,7 +46,6 @@
             <CardBack
               v-model="moodState"
               :submitting="submitting"
-              @submit="onSubmitMood"
               @close="close"
             />
           </div>
@@ -63,8 +62,11 @@ import CardBack from './InnerCard/CardBack.vue'
 import { ElButton, ElTooltip } from 'element-plus'
 import { Close, Memo, Collection } from '@element-plus/icons-vue'
 
+// 更新 MoodState 接口以支持多选
 interface MoodState {
-  mood?: string
+  events?: string[]
+  moods?: string[]
+  intensity?: number
   text?: string
 }
 
@@ -95,15 +97,16 @@ const props = withDefaults(defineProps<Props>(), {
   theme: 'calm',
   modelValue: false,
   submitting: false,
-  defaultMood: () => ({ mood: 'happy', text: '' })
+  defaultMood: () => ({ events: [], moods: [], intensity: 0.5, text: '' })
 })
 
+// 更新 emit 定义以支持多选
 const emit = defineEmits<{
   (e: 'update:modelValue', v: boolean): void
   (e: 'open'): void
   (e: 'close'): void
   (e: 'primary'): void
-  (e: 'submit-mood', payload: { mood: string; text: string }): void
+  (e: 'submit-mood', payload: { events: string[]; moods: string[]; intensity: number; text: string }): void
 }>()
 
 const innerVisible = ref<boolean>(props.modelValue)
@@ -134,7 +137,9 @@ function toggleFlip() {
 }
 
 const moodState = ref<MoodState>({ ...props.defaultMood })
-function onSubmitMood(payload: { mood: string; text: string }) {
+
+// 更新 onSubmitMood 函数以处理多选数据
+function onSubmitMood(payload: { events: string[]; moods: string[]; intensity: number; text: string }) {
   emit('submit-mood', payload)
 }
 
@@ -142,6 +147,7 @@ const submitting = computed(() => props.submitting)
 </script>
 
 <style scoped>
+/* 样式保持不变 */
 .overlay {
   position: fixed;
   inset: 0;
@@ -158,7 +164,7 @@ const submitting = computed(() => props.submitting)
   position: relative;
   border-radius: 30px;
   perspective: 1200px;
-  top: -10%;
+  top: -6%;
 }
 
 .close-btn {

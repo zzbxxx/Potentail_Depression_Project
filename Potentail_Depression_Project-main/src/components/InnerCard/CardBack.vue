@@ -9,39 +9,41 @@
           v-for="event in eventOptions"
           :key="event.key"
           class="event-item"
-          @click="selectEvent(event)"
+          :class="{ selected: selectedEvents.includes(event.key) }"
+          @click="toggleEvent(event)"
         >
           <span class="event-label">{{ event.label }}</span>
         </div>
       </div>
 
       <!-- 情绪类型选择 -->
-      <div class="mood-selection" >
+      <div class="mood-selection">
         <div
           v-for="mood in moodOptions"
           :key="mood.key"
           class="mood-item"
-          :class="{ selected: selectedMood?.key === mood.key }"
-          @click="selectMood(mood)"
+          :class="{ selected: selectedMoods.includes(mood.key) }"
+          @click="toggleMood(mood)"
         >
           <img :src="mood.image" :alt="mood.label" class="mood-image" />
           <span class="mood-label">{{ mood.label }}</span>
         </div>
       </div>
 
-      <!-- 情绪强度滑块 -->
-      <div class="intensity-selection" v-if="selectedMood">
-        <el-form-item label="情绪强度">
-          <el-slider
-            v-model="form.intensity"
-            :min="0"
-            :max="1"
-            :step="0.1"
-            show-input
-            :format-tooltip="formatTooltip"
-          />
-
-        </el-form-item>
+      <!-- 情绪强度滑块（为每种情绪生成一个滑块） -->
+      <div class="intensity-selection" v-if="selectedMoods.length > 0">
+        <div v-for="mood in selectedMoods" :key="mood" class="intensity-item">
+          <el-form-item :label="`情绪强度 - ${getMoodLabel(mood)}`">
+            <el-slider
+              v-model="form.intensities[mood]"
+              :min="0"
+              :max="1"
+              :step="0.1"
+              show-input
+              :format-tooltip="formatTooltip"
+            />
+          </el-form-item>
+        </div>
       </div>
 
       <!-- 文本输入和语音输入 -->
@@ -50,7 +52,6 @@
         :model="form"
         ref="formRef"
         label-position="top"
-        v-if="selectedMood"
       >
         <el-form-item label="想对自己说点什么？（可选）">
           <div class="input-wrapper">
@@ -77,10 +78,9 @@
           </div>
         </el-form-item>
       </el-form>
-
     </section>
 
-    <footer class="card-footer" v-if="selectedMood">
+    <footer class="card-footer" v-if="selectedMoods.length > 0">
       <el-button size="small" class="ghost-btn" @click="$emit('close')">
         稍后再说
       </el-button>
@@ -97,7 +97,6 @@
   </article>
 </template>
 
-
 <script setup lang="ts">
 import { reactive, ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { ElMessage, type FormInstance } from 'element-plus'
@@ -106,6 +105,10 @@ import happyImage from '/src/assets/moods/happy.png'
 import neutralImage from '/src/assets/moods/neutral.png'
 import sadImage from '/src/assets/moods/sad.png'
 import despairImage from '/src/assets/moods/despair.png'
+// @ts-ignore
+import { withDefaults, defineProps, defineEmits } from '/src/utils/props'
+// @ts-ignore
+import MoodApiService from '/src/api/moodApi.js'
 
 interface EventOption {
   key: string
@@ -120,96 +123,99 @@ interface MoodOption {
 
 interface Props {
   modelValue?: {
-    event?: string
-    mood?: string
-    intensity?: number
+    events?: string[]
+    moods?: string[]
+    intensities?: Record<string, number> // 修改为对象，存储每种情绪的强度
     text?: string
   }
   submitting?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: () => ({ event: '', mood: 'happy', intensity: 0.5, text: '' }),
+  modelValue: () => ({ events: [], moods: [], intensities: {}, text: '' }),
   submitting: false
 })
 
 const emit = defineEmits<{
-  (e: 'update:modelValue', v: { event?: string; mood?: string; intensity?: number; text?: string }): void
-  (e: 'submit', payload: { event: string; mood: string; intensity: number; text: string }): void
+  (e: 'update:modelValue', v: { events: string[]; moods: string[]; intensities: Record<string, number>; text: string }): void
+  (e: 'submit', payload: { events: string[]; moods: string[]; intensities: Record<string, number>; text: string }): void
   (e: 'close'): void
 }>()
 
-// 明确指定 eventOptions 和 moodOptions 的类型
 const eventOptions = ref<EventOption[]>([
   { key: 'family', label: '家庭' },
   { key: 'love', label: '恋爱' },
   { key: 'study', label: '学业' },
   { key: 'work', label: '工作' },
   { key: 'other', label: '其他' }
-]);
+])
 
 const moodOptions = ref<MoodOption[]>([
   { key: 'happy', label: '乐观', image: happyImage as string },
-  { key: 'neutral', label: '平静', image: neutralImage as string },
+  { key: 'calm', label: '平静', image: neutralImage as string }, // 将 "neutral" 改为 "calm"
   { key: 'sad', label: '低落', image: sadImage as string },
-  { key: 'despair', label: '绝望', image: despairImage as string }
-]);
+  { key: 'anxious', label: '焦虑', image: despairImage as string } // 将 "despair" 改为 "anxious"
+])
 
-const selectedEvent = ref<EventOption | null>(null)
-const selectedMood = ref<MoodOption | null>(null)
+const selectedEvents = ref<string[]>(props.modelValue?.events || [])
+const selectedMoods = ref<string[]>(props.modelValue?.moods || [])
 const form = reactive({
-  intensity: props.modelValue?.intensity || 0.5,
+  intensities: props.modelValue?.intensities || {}, // 存储每种情绪的强度
   text: props.modelValue?.text || ''
 })
 
-if (props.modelValue?.event) {
-  //@ts-ignore
-  const event = eventOptions.value.find(e => e.key === props.modelValue!.event);
-  if (event) selectedEvent.value = event;
-}
-if (props.modelValue?.mood) {
-  //@ts-ignore
-  const mood = moodOptions.value.find(m => m.key === props.modelValue!.mood);
-  if (mood) selectedMood.value = mood;
-}
-
-watch(() => [form.intensity, form.text], ([intensity, text]) => {
-  const payload: { event?: string; mood?: string; intensity?: number; text?: string } = {
-    event: selectedEvent.value?.key || '',
-    mood: selectedMood.value?.key || '',
-    intensity: Number(intensity), // 转换为 number
-    text : form.text.trim()
-  }
-  emit('update:modelValue', payload)
+// 当选择情绪时，初始化强度值
+watch(selectedMoods, (newMoods, oldMoods) => {
+  // 为新选择的情绪初始化强度值
+  newMoods.forEach((mood) => {
+    if (!(mood in form.intensities)) {
+      form.intensities[mood] = 0.5 // 默认强度为 50%
+    }
+  })
+  // 移除未选择情绪的强度值
+  Object.keys(form.intensities).forEach((mood) => {
+    if (!newMoods.includes(mood)) {
+      delete form.intensities[mood]
+    }
+  })
 })
 
-function selectEvent(event: EventOption) {
-  selectedEvent.value = event
-  const payload: { event?: string; mood?: string; intensity?: number; text?: string } = {
-    event: event.key,
-    mood: selectedMood.value?.key || '',
-    intensity: form.intensity,
-    text: form.text
-  }
-  emit('update:modelValue', payload)
+// 监听表单变化并触发更新
+watch(
+  () => [form.intensities, form.text, selectedEvents.value, selectedMoods.value],
+  () => {
+    const payload = {
+      events: [...selectedEvents.value],
+      moods: [...selectedMoods.value],
+      intensities: { ...form.intensities },
+      text: form.text.trim()
+    }
+    emit('update:modelValue', payload)
+  },
+  { deep: true }
+)
+
+// 获取情绪的标签
+function getMoodLabel(moodKey: string) {
+  const mood = moodOptions.value.find((m) => m.key === moodKey)
+  return mood ? mood.label : moodKey
 }
 
-function selectMood(mood: MoodOption) {
-  selectedMood.value = mood
-  const payload: { event?: string; mood?: string; intensity?: number; text?: string } = {
-    event: selectedEvent.value?.key || '',
-    mood: mood.key,
-    intensity: form.intensity,
-    text: form.text
+function toggleEvent(event: EventOption) {
+  const index = selectedEvents.value.indexOf(event.key)
+  if (index > -1) {
+    selectedEvents.value.splice(index, 1)
+  } else {
+    selectedEvents.value.push(event.key)
   }
-  emit('update:modelValue', payload)
 }
 
-function goBack() {
-  if (selectedMood.value) {
-    selectedMood.value = null
-  } else if (selectedEvent.value) {
-    selectedEvent.value = null
+function toggleMood(mood: MoodOption) {
+  const index = selectedMoods.value.indexOf(mood.key)
+  if (index > -1) {
+    selectedMoods.value.splice(index, 1)
+  } else {
+    selectedMoods.value.push(mood.key)
   }
 }
 
@@ -218,18 +224,26 @@ function formatTooltip(val: number) {
 }
 
 const formRef = ref<FormInstance>()
-function onSubmit() {
-  if (!selectedEvent.value || !selectedMood.value) {
-    ElMessage.warning('请完成所有选择～')
+async function onSubmit() {
+  if (selectedEvents.value.length === 0 || selectedMoods.value.length === 0) {
+    ElMessage.warning('请至少选择一个事件类别和一种情绪～')
     return
   }
+  
   const payload = {
-    event: selectedEvent.value.key,
-    mood: selectedMood.value.key,
-    intensity: form.intensity,
+    userId: 1, // TODO: 从登录状态获取用户ID
+    moodVector: { ...form.intensities },
+    events: [...selectedEvents.value],
     text: form.text.trim()
   }
-  emit('submit', payload)
+  
+  try {
+    await MoodApiService.saveMood(payload)
+    ElMessage.success('记录成功！')
+  } catch (error) {
+    ElMessage.error('记录失败，请稍后再试～')
+    console.error('Submit error:', error)
+  }
 }
 
 const submitting = computed(() => props.submitting)
@@ -293,8 +307,8 @@ function toggleVoiceInput() {
   }
 }
 </script>
-
 <style scoped>
+/* 其他样式保持不变 */
 .card {
   border-radius: 16px;
   overflow: hidden;
@@ -342,6 +356,12 @@ function toggleVoiceInput() {
   background: rgba(255, 204, 128, 0.4);
 }
 
+.event-item.selected,
+.mood-item.selected {
+  background: rgba(255, 204, 128, 0.3);
+  border: 2px solid #ffcc80;
+}
+
 .event-label {
   font-size: 14px;
   color: #5d4037;
@@ -369,11 +389,6 @@ function toggleVoiceInput() {
   background: rgba(255, 204, 128, 0.2);
 }
 
-.mood-item.selected {
-  background: rgba(255, 204, 128, 0.3);
-  border: 2px solid #ffcc80;
-}
-
 .mood-image {
   width: 60px;
   height: 60px;
@@ -389,6 +404,10 @@ function toggleVoiceInput() {
 
 .intensity-selection {
   margin-bottom: 16px;
+}
+
+.intensity-item {
+  margin-bottom: 12px;
 }
 
 .mood-form {
@@ -461,18 +480,6 @@ function toggleVoiceInput() {
   gap: 12px;
   padding: 12px 16px;
   justify-content: flex-end;
-}
-
-.back-btn {
-  background: transparent;
-  color: #8d6e63;
-  border: 1px solid #ffcc80;
-  margin-bottom: 12px;
-}
-
-.back-btn:hover {
-  background: rgba(255, 204, 128, 0.2);
-  color: #5d4037;
 }
 
 .calm-btn.el-button {

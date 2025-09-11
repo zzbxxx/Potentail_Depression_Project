@@ -4,6 +4,7 @@ import path from 'path'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import type { ViteDevServer } from 'vite'
+// @ts-ignore
 import { redirectMiddleware } from './src/middleware/redirect'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 

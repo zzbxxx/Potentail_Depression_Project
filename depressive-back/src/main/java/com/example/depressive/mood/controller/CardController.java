@@ -27,8 +27,5 @@ public class CardController {
         return service.history(userId);
     }
 
-    @PostMapping("/mood")
-    public void mood(@Valid @RequestBody MoodReq req) throws JsonProcessingException {
-        service.saveMood(req);
-    }
+
 }

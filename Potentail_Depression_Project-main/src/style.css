@@ -1,0 +1,4 @@
+.el-message {
+    z-index: 30000 !important;
+    margin-top: 4%;
+}

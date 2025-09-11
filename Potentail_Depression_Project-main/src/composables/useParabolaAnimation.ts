@@ -37,6 +37,7 @@ export default function useParabolaAnimation(options: AnimationConfig = {}): Par
     // 动画状态
     const isAnimating = ref(false)
     const progress = ref(0)
+    const animationType = ref<'show' | 'hide'>('show') // 添加动画类型标识
     const animState = reactive<{
         start: AnimationState
         target: AnimationState
@@ -48,9 +49,17 @@ export default function useParabolaAnimation(options: AnimationConfig = {}): Par
     // 计算动画样式
     const style = computed(() => {
         if (!isAnimating.value) {
-            return {
-                transform: 'translate(0, 0) scale(1)',
-                opacity: 1
+            // 根据动画类型返回最终状态
+            if (animationType.value === 'show') {
+                return {
+                    transform: 'translate(0, 0) scale(1)',
+                    opacity: 1
+                }
+            } else {
+                return {
+                    transform: `translate(${animState.target.x}px, ${animState.target.y}px) scale(${config.scale})`,
+                    opacity: 0
+                }
             }
         }
 
@@ -60,7 +69,7 @@ export default function useParabolaAnimation(options: AnimationConfig = {}): Par
         const currentOpacity = animState.start.opacity + (animState.target.opacity - animState.start.opacity) * progress.value
 
         // 修复抛物线效果判断条件
-        const isHiding = animState.target.opacity < animState.start.opacity
+        const isHiding = animationType.value === 'hide'
         const parabolaY = isHiding ? -config.parabolaHeight * Math.sin(progress.value * Math.PI) : 0
 
         return {
@@ -80,6 +89,8 @@ export default function useParabolaAnimation(options: AnimationConfig = {}): Par
             console.log('Animation already in progress, cannot start new hide animation')
             return
         }
+
+        animationType.value = 'hide'
 
         const elementRect = element.getBoundingClientRect()
         const targetRect = targetElement.getBoundingClientRect()
@@ -102,7 +113,7 @@ export default function useParabolaAnimation(options: AnimationConfig = {}): Par
         animState.target.opacity = 0
 
         // 开始动画
-        startAnimation(element, onComplete)
+        startAnimation(onComplete)
     }
 
     // 显示动画（平滑淡入）
@@ -115,10 +126,12 @@ export default function useParabolaAnimation(options: AnimationConfig = {}): Par
             return
         }
 
+        animationType.value = 'show'
+
         // 设置动画参数（从完全透明到完全显示）
         animState.start.x = 0
         animState.start.y = 0
-        animState.start.scale = 1
+        animState.start.scale = 0.8 // 从稍微缩小开始
         animState.start.opacity = 0
 
         animState.target.x = 0
@@ -127,10 +140,10 @@ export default function useParabolaAnimation(options: AnimationConfig = {}): Par
         animState.target.opacity = 1
 
         // 开始动画
-        startAnimation(element, onComplete)
+        startAnimation(onComplete)
     }
 
-    const startAnimation = (element: HTMLElement, onComplete?: () => void) => {
+    const startAnimation = (onComplete?: () => void) => {
         isAnimating.value = true
         progress.value = 0
 
@@ -143,9 +156,9 @@ export default function useParabolaAnimation(options: AnimationConfig = {}): Par
             if (progress.value < 1) {
                 requestAnimationFrame(frame)
             } else {
-                // 确保动画状态正确重置
+                // 动画完成
                 isAnimating.value = false
-                progress.value = 0
+                progress.value = 1
                 onComplete?.()
             }
         }

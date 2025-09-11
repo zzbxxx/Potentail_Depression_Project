@@ -1,6 +1,16 @@
 export default class MoodApiService {
 
     static BASE_URL = "api/card";
+    static MOOD_BASE_URL = "api/mood";
+    static async saveMood(data) {
+        const response = await fetch(`${this.MOOD_BASE_URL}/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+        console.log(response);
+        return response.json();
+    }
 
     static async getToadyCard() {
 
