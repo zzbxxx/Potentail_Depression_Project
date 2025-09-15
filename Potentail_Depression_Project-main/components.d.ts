@@ -8,12 +8,14 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    BackgroundScene: typeof import('./src/components/BackgroundScene.vue')['default']
     BookMask: typeof import('./src/components/bookMask.vue')['default']
     CardBack: typeof import('./src/components/InnerCard/CardBack.vue')['default']
     CardFront: typeof import('./src/components/InnerCard/CardFront.vue')['default']
     CardGallery3D: typeof import('./src/components/CardGallery3D.vue')['default']
     CardPopup: typeof import('./src/components/CardPopup.vue')['default']
     ElButton: typeof import('element-plus/es')['ElButton']
+    ElCalendar: typeof import('element-plus/es')['ElCalendar']
     ElCheckbox: typeof import('element-plus/es')['ElCheckbox']
     ElCheckboxGroup: typeof import('element-plus/es')['ElCheckboxGroup']
     ElDialog: typeof import('element-plus/es')['ElDialog']
@@ -26,9 +28,11 @@ declare module 'vue' {
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
+    EmailCompotent: typeof import('./src/components/emailCompotent.vue')['default']
     HelpComponent: typeof import('./src/components/HelpComponent.vue')['default']
     'HelpComponent.': typeof import('./src/components/HelpComponent..vue')['default']
     MessageTip: typeof import('./src/components/tip/messageTip.vue')['default']
+    MoodCalendar: typeof import('./src/components/DateComponent/MoodCalendar.vue')['default']
     RecoveryCode: typeof import('./src/components/RecoveryCode.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

@@ -1,5 +1,5 @@
 // authInterface.js
-const API_PREFIX = '/api/auth'; // 顺便把单词拼写修正一下
+const API_PREFIX = '/api/auth';
 
 export async function login(data) {
     const response = await fetch(`${API_PREFIX}/login`, {

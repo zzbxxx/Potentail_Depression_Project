@@ -122,7 +122,7 @@ const sendEmergencyAlert = async () => {
   right: 20px;
   bottom: 20px;
   z-index: 21000;
-  width: 200px;
+  width: 12rem;
   background-color: aliceblue;
   border-radius: 12px;
   padding: 10px;

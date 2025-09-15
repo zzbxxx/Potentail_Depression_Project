@@ -278,7 +278,6 @@ defineExpose({
 </script>
 
 <style scoped>
-/* 调整 ElOverlay 的样式以匹配原有的 mask-layer */
 .mask-layer {
   position: fixed;
   top: 0;
@@ -287,11 +286,10 @@ defineExpose({
   height: 100%;
   background-color: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
-  z-index: 1998; /* 比容器低一级 */
+  z-index: 1998; 
   transition: opacity 0.3s ease;
 }
 
-/* 以下样式保持不变 */
 .tip-popup {
   position: fixed;
   top: 50%;

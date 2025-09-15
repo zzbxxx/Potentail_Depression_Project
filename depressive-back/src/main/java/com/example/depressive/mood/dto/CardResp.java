@@ -11,4 +11,5 @@ public class CardResp {
     private String author;
     private String bookTitle;
     private List<String> tags;
+
 }

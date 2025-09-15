@@ -1,4 +1,3 @@
-/* 认证页面样式 */
 .auth-container {
     position: fixed;
     top: 0;
@@ -10,23 +9,23 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
-
+    min-width: 600px;
 }
 
 .auth-form {
     background: rgba(26, 42, 108, 0.9);
-    padding: 3rem;
-    padding-right: 4rem;
+    padding: 2.5rem;
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-    width: 90%;
-    max-width: 400px;
+    width: 100%;
+    max-width: 480px;
     margin-bottom: 1.5rem;
     border: 1px solid rgba(74, 144, 226, 0.3);
+    box-sizing: border-box;
 }
 
 .auth-tab h3 {
-    margin-bottom: 1.5rem;
+    margin: 0 0 1.8rem 0;
     color: #a0c4ff;
     text-align: center;
     font-size: 1.5rem;
@@ -44,6 +43,7 @@
     font-size: 1rem;
     font-family: 'Noto Sans SC', sans-serif;
     transition: all 0.3s ease;
+    box-sizing: border-box;
 }
 
 .input-field:focus {
@@ -69,7 +69,7 @@
     transition: all 0.3s ease;
     width: 100%;
     font-family: 'Noto Sans SC', sans-serif;
-
+    margin-top: 0.5rem;
 }
 
 .submit-btn:hover {
@@ -86,8 +86,9 @@
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
-    width: 90%;
-    max-width: 400px;
+    width: 100%;
+    max-width: 380px;
+    margin-top: 1.2rem;
 }
 
 .tab-item {
@@ -97,12 +98,14 @@
     background: rgba(26, 42, 108, 0.6);
     text-decoration: none;
     color: #a0c4ff;
-    font-weight: 500;
+    font-weight: 800;
+    font-size: 16px;
     text-align: center;
     transition: all 0.3s ease;
     border: 1px solid #3a5683;
     cursor: pointer;
     font-family: 'Noto Sans SC', sans-serif;
+    box-sizing: border-box;
 }
 
 .tab-item:hover {
@@ -112,22 +115,38 @@
     color: #ffffff;
 }
 
+.error-popup {
+    background: rgba(200, 60, 60, 0.8);
+    color: white;
+    padding: 0.8rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
 /* 响应式设计 */
 @media (max-width: 480px) {
     .auth-form {
-        padding: 1.5rem;
+        padding: 1.8rem;
         margin: 1rem;
     }
 
     .auth-tab h3 {
         font-size: 1.3rem;
+        margin-bottom: 1.5rem;
     }
 
     .input-field {
         padding: 0.9rem;
+        margin-bottom: 1rem;
     }
 
     .submit-btn {
         padding: 0.9rem;
+    }
+
+    .action-tabs {
+        margin-top: 1rem;
     }
 }

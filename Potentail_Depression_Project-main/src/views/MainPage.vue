@@ -26,6 +26,17 @@
         </span>
       </el-button>
 
+      <el-button 
+        type="primary" 
+        class="email-btn"
+        @click="goToEmail"
+        :icon="Clock " 
+      >
+        <span>
+          邮箱
+        </span>
+      </el-button>
+
     <RecoveryCode
       v-model="showRecoveryCode" 
       :button-ref="buttonElement"
@@ -66,8 +77,9 @@
     @open="onOpen"
     @close="onClose"
   />
+  
 
-  <div style="background-color: aliceblue; width: 200px;" class="Emergency">
+  <div style="background-color: aliceblue; ">
     <HelpComponent />
   </div>
 </template>
@@ -80,7 +92,6 @@ import HelpComponent from '../components/HelpComponent.vue'
 import CardGallery3D from '../components/CardGallery3D.vue'
 import CardPopup from '../components/CardPopup.vue'
 import { useRouter } from 'vue-router'
-
 import MoodApiService from '../api/moodApi.js'
 
 import todayCardImage from '../assets/image/today-card.jpg'
@@ -118,15 +129,11 @@ async function onAddToList() {
 }
 const router = useRouter()
 async function goToDateLog() {
-  try {
-    const info = await MoodApiService.getMoodHistoryInfo()
-  } catch (error) {
-    console.error('API failed:', error)
-    ElMessage.error('获取日志数据失败，请稍后再试')
-  }
   router.push('/mood-log')
 }
-
+async function goToEmail(){
+  router.push('/email-compotent')
+}
 async function getCardInfo() {
   const { bookTitle, author, quoteText } = await MoodApiService.getToadyCard();
   Object.assign(demo, {
@@ -214,7 +221,22 @@ const toggleRecoveryCode = () => {
   left: 20px;
   z-index: 1000;
 }
+.email-btn{
+  position: fixed;
+  right: 2rem;
+  top: 4rem;
+  z-index: 21000;
+  width: 6rem;
+  background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e0f2fe;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
 
+.email-btn:hover {
+  background: linear-gradient(135deg, #0d2b4e 0%, #1a5f9c 100%);
+  transform: translateY(-2px);
+}
 .deep-sea-btn {
   background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
