@@ -1,9 +1,9 @@
 <template>
   <div class="MoodCalendar">
-    <el-calendar v-model="selectedDate" @change="handleDateChange">
+    <el-calendar :value="currentDate" @input="handleDateSelect">
       <template #date-cell="{ data }">
-        <div :class="{ 'has-data': hasMoodData(data.day) }">
-          {{ data.day.split('-')[2] }}
+        <div :class="{ 'has-data': markedDates.includes(data.day) }" @click="emitDateChange(data.day)">
+          {{ data.day.split('-').slice(-1)[0] }}
         </div>
       </template>
     </el-calendar>
@@ -12,57 +12,62 @@
 
 <script setup>
 import { ref } from 'vue'
+import { ElCalendar } from 'element-plus'
 
-// 正确定义 props
-const props = defineProps({
+defineProps({
   moodDataStore: {
     type: Object,
     default: () => ({})
+  },
+  markedDates: {
+    type: Array,
+    default: () => []
   }
 })
+
 const emit = defineEmits(['date-change'])
-const selectedDate = ref(new Date())
+const currentDate = ref(new Date())
 
-// 检查某天是否有数据
-const hasMoodData = (day) => {
-  return !!props.moodDataStore[day]
-}
-
-// 日期变化时触发事件
-const handleDateChange = (date) => {
+const handleDateSelect = (date) => {
   const formattedDate = date.toISOString().split('T')[0]
   emit('date-change', formattedDate)
+}
+
+const emitDateChange = (day) => {
+  emit('date-change', day)
 }
 </script>
 
 <style scoped>
 .MoodCalendar {
   background-color: #ffffff;
-  padding: 1.5rem;
+  padding: 1rem;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* 绿色标记样式 */
 :deep(.el-calendar-day) {
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: relative;
+  cursor: pointer;
 }
 
-:deep(.has-data) {
-  background-color: #e6f4ea;
+.has-data {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+}
+
+.has-data::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 6px;
+  height: 6px;
+  background-color: #67c23a; /* 绿色标记 */
   border-radius: 50%;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-@media (max-width: 768px) {
-  .MoodCalendar {
-    padding: 1rem;
-  }
 }
 </style>

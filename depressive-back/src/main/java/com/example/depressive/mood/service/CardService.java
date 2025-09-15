@@ -75,6 +75,8 @@ public class CardService {
                     CardResp r = new CardResp();
                     BeanUtils.copyProperties(c, r);
                     r.setTags(List.of(c.getTags().replaceAll("[\\[\\]\"]", "").split(",")));
+                    r.setDate(l.getDate());
+                    System.out.println("l is"+l.getDate());
                     return r;
                 })
                 .toList();

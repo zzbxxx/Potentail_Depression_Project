@@ -2,23 +2,23 @@
   <article class="card">
     <header class="card-header">
       <img
-        v-if="cover"
+        v-if="demo.cover"
         class="card-cover"
-        :src="cover"
-        :alt="coverAlt || title || 'cover image'"
+        :src="demo.cover"
+        :alt="demo.title || 'cover image'"
         loading="lazy"
       />
     </header>
 
     <section class="card-content">
-      <p v-if="description" class="desc">
-        {{ description }}
+      <p v-if="demo.desc" class="desc">
+        {{ demo.desc }}
       </p>
       <slot name="content"></slot>
 
-      <div v-if="title || subtitle" class="meta">
-        <h3 v-if="title" class="book-title">《{{ title }}》</h3>
-        <p v-if="subtitle" class="subtitle">{{ subtitle }}</p>
+      <div v-if="demo.title || demo.author" class="meta">
+        <h3 v-if="demo.title" class="book-title">《{{ demo.title }}》</h3>
+        <p v-if="demo.author" class="subtitle">{{ demo.author }}</p>
       </div>
     </section>
 
@@ -39,29 +39,35 @@
 </template>
 
 <script setup lang="ts">
-interface Props {
-  cover?: string
-  coverAlt?: string
-  title?: string
-  subtitle?: string
-  description?: string
-  primaryActionText?: string
-}
-withDefaults(defineProps<Props>(), {
+import { reactive } from 'vue';
+// @ts-ignore
+import MoodApiService from '/src/api/moodApi.js';
+
+const demo = reactive({
   cover: '',
-  coverAlt: '',
   title: '',
-  subtitle: '',
-  description: '',
-  primaryActionText: ''
-})
-defineEmits<{
-  (e: 'primary'): void
-  (e: 'close'): void
-}>()
+  author: '',
+  desc: ''
+});
+
+async function getCardInfo() {
+  try {
+    const { bookTitle, author, quoteText } = await MoodApiService.getTodayCard();
+    Object.assign(demo, {
+      cover: 'src/assets/image/FT.jpg',
+      title: bookTitle,
+      author,
+      desc: quoteText
+    });
+  } catch (error) {
+    console.error('获取卡片数据失败:', error);
+  }
+}
+getCardInfo();
 </script>
 
 <style scoped>
+/* 样式保持不变 */
 .card {
   border-radius: 16px;
   overflow: hidden;

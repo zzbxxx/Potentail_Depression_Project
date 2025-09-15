@@ -8,7 +8,7 @@
         :icon="Edit"
         @click="toggleRecoveryCode"
         class="deep-sea-btn"
-        v-if="isAccountLogin"
+        v-if="!isAccountLogin"
       >
         {{ showRecoveryCode ? '收起找回码' : '打开找回码' }}
       </el-button>
@@ -66,13 +66,6 @@
 
   <card-popup
     v-model="show"
-    :cover="demo.cover"
-    :title="demo.title"
-    :subtitle="demo.author"
-    :description="demo.desc"
-    :primary-action-text="primaryActionText"
-    :submitting="submitting"
-    :default-mood="popupModel"
     @primary="onAddToList"
     @open="onOpen"
     @close="onClose"
@@ -109,12 +102,12 @@ const goToHome = () => {
   window.location.href = '/'
 }
 
-const demo = reactive({
-  cover: '', 
-  title: '',
-  author: '',
-  desc: ''
-});
+// const demo = reactive({
+//   cover: '', 
+//   title: '',
+//   author: '',
+//   desc: ''
+// });
 
 async function onAddToList() {
   submitting.value = true
@@ -134,15 +127,15 @@ async function goToDateLog() {
 async function goToEmail(){
   router.push('/email-compotent')
 }
-async function getCardInfo() {
-  const { bookTitle, author, quoteText } = await MoodApiService.getToadyCard();
-  Object.assign(demo, {
-    cover: 'src/assets/image/FT.jpg',
-    title: bookTitle,
-    author,
-    desc: quoteText
-  });
-}
+// async function getCardInfo() {
+//   const { bookTitle, author, quoteText } = await MoodApiService.getTodayCard();
+//   Object.assign(demo, {
+//     cover: 'src/assets/image/FT.jpg',
+//     title: bookTitle,
+//     author,
+//     desc: quoteText
+//   });
+// }
 
 const getButtonElement = async () => {
   if (!buttonRef.value) return null
@@ -176,8 +169,8 @@ watch([showRecoveryCode, buttonRef], async ([newShowVal, newButtonVal]) => {
 
 // 组件挂载后获取按钮元素
 onMounted(async () => {
-  const token = localStorage.getItem("token")
-  if(token){
+  const user_id = localStorage.getItem("user_id")
+  if(user_id){
     isAccountLogin.value = false
   }
   

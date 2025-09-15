@@ -65,6 +65,7 @@ import { useRouter } from 'vue-router'
 import DeviceApiService from '@/api/deviceApi'
 import { login, register } from '@/api/authApi'
 import BackgroundScene from '@/components/BackgroundScene.vue'
+import { lo, tr } from 'element-plus/es/locales.mjs'
 
 const router = useRouter()
 const view = ref('welcome')
@@ -75,16 +76,27 @@ const code = ref('')
 
 
 async function touristLogin() {
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('userId')
   const fingerprint = await DeviceApiService.generateDeviceFingerprint()
-  const result = await DeviceApiService.guestLogin(fingerprint)
-  localStorage.setItem('auth_token', result.token)
+  try {
+    const result = await DeviceApiService.guestLogin(fingerprint)
+    localStorage.setItem('auth_token', result.token)
+    localStorage.setItem('user_id', result.userId)
+  } catch (error) {
+    console.log(error)
+  }
+  
   router.push('/main')
 }
 
 async function doLogin() {
   const res = await login(loginForm.value)
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('user_id')
   if (res.token) {
     localStorage.setItem('auth_token', res.token)
+    localStorage.setItem('userId', res.id)
     router.push('/main')
   }
 }

@@ -8,7 +8,7 @@
       </div>
       <!-- 右侧：MoodCalendar 组件 -->
       <div class="right-panel">
-        <MoodCalendar :mood-data-store="moodDataStore" @date-change="handleDateChange" />
+        <MoodCalendar :mood-data-store="moodDataStore" :marked-dates="markedDates" @date-change="handleDateChange" />
       </div>
     </div>
     <el-button type="primary" @click="goBack">返回首页</el-button>
@@ -18,27 +18,44 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import CardFront from '/src/components/CardPopup.vue'
-import MoodCalendar from '/src/components/DateComponent/MoodCalendar.vue' 
+import { ElMessage } from 'element-plus'
+import CardPopup from '/src/components/CardPopup.vue'
+import MoodCalendar from '/src/components/DateComponent/MoodCalendar.vue'
 import MoodApiService from '/src/api/moodApi.js'
+
 const router = useRouter()
 const selectedDate = ref(new Date().toISOString().split('T')[0]) // 当前选中的日期
 const moodData = ref(null) // 当前日期的情绪数据
+const moodDataStore = ref({}) // 存储日期和对应的 CardResp 数据
+const markedDates = ref([]) // 存储有记录的日期，用于绿色标记
 
+// 获取情绪历史数据
 const fetchData = async () => {
-    try {
+  try {
     const info = await MoodApiService.getMoodHistoryInfo()
+    // 假设 info 是提供的 JSON 数据
+    moodDataStore.value = info.reduce((acc, item) => {
+      acc[item.date] = {
+        id: item.id,
+        quoteText: item.quoteText,
+        author: item.author,
+        bookTitle: item.bookTitle,
+        tags: item.tags
+      }
+      return acc
+    }, {})
+    // 提取有记录的日期用于标记
+    markedDates.value = info.map(item => item.date)
+    // 初始化选中日期的数据
+    moodData.value = moodDataStore.value[selectedDate.value] || null
   } catch (error) {
     console.error('API failed:', error)
     ElMessage.error('获取日志数据失败，请稍后再试')
   }
 }
-fetchData();
 
-// 模拟情绪数据
-const moodDataStore = ref({
-  '2025-09-13': { mood: '平静', note: '今天感觉还不错' },
-  '2025-09-12': { mood: '低落', note: '有点疲惫' }
+onMounted(() => {
+  fetchData()
 })
 
 // 处理日历日期变化
@@ -47,9 +64,8 @@ const handleDateChange = (formattedDate) => {
   moodData.value = moodDataStore.value[formattedDate] || null
 }
 
-// 返回首页
 const goBack = () => {
-  router.push('/')
+  router.push('/main')
 }
 </script>
 

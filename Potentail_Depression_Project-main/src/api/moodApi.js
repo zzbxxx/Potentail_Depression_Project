@@ -12,7 +12,7 @@ export default class MoodApiService {
         return response.json();
     }
 
-    static async getToadyCard() {
+    static async getTodayCard() {
 
         let userId = localStorage.getItem("userId");
         let isGuest = false;
@@ -24,7 +24,6 @@ export default class MoodApiService {
 
         const params = new URLSearchParams();
         if (userId) params.set("userId", userId);
-        if (isGuest) params.set("guest", "1");
 
         const response = await fetch(`${this.BASE_URL}/today?${params}`, {
             method: 'GET',
