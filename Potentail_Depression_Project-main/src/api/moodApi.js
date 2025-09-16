@@ -3,7 +3,7 @@ export default class MoodApiService {
     static BASE_URL = "api/card";
     static MOOD_BASE_URL = "api/mood";
     static async saveMood(data) {
-        const response = await fetch(`${this.MOOD_BASE_URL}/save`, {
+        const response = await fetch(`${this.MOOD_BASE_URL}/saveMood`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -25,7 +25,7 @@ export default class MoodApiService {
         const params = new URLSearchParams();
         if (userId) params.set("userId", userId);
 
-        const response = await fetch(`${this.BASE_URL}/today?${params}`, {
+        const response = await fetch(`${this.BASE_URL}/getCardToday?${params}`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
         });
@@ -33,15 +33,26 @@ export default class MoodApiService {
         return response.json();
     }
 
-    static async getMoodHistoryInfo() {
+    static async getCardHistoryInfo() {
         let userId = localStorage.getItem("userId") || localStorage.getItem("user_id")
 
-        const res = await fetch(`${this.BASE_URL}/history?userId=${userId}`, {
+        const res = await fetch(`${this.BASE_URL}/cardHistory?userId=${userId}`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
         })
 
         return res.json();
 
+    }
+
+    static async getMoodHistoryInfo() {
+        let userId = localStorage.getItem("userId") || localStorage.getItem("user_id")
+
+        const res = await fetch(`${this.MOOD_BASE_URL}/getMoodHistory?userId=${userId}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        })
+
+        return res.json();
     }
 }

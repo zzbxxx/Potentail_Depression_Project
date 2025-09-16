@@ -9,5 +9,8 @@ public class RecoveryRequest {
     private String code;
 
     @NotBlank
+    private String deviceInfo;
+
+    @NotBlank
     private String newDeviceFingerprint;
 }

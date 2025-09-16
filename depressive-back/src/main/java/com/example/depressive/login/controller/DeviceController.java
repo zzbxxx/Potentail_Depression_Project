@@ -16,7 +16,7 @@ public class DeviceController {
 
     @PostMapping("/guest-login")
     public ResponseEntity<DeviceTokenResponse> guestLogin(@RequestBody @Valid GuestLoginRequest request) {
-        System.out.println("request："+request.getNewDeviceFingerprint());
+
         DeviceToken token = authService.createGuestToken(request.getNewDeviceFingerprint(),request.getDeviceInfo());
         boolean usedFingerprint = token.getFingerprintHash() != null;
         return ResponseEntity.ok(new DeviceTokenResponse(
@@ -45,8 +45,10 @@ public class DeviceController {
     public ResponseEntity<DeviceTokenResponse> recoverDevice(
             @RequestBody @Valid RecoveryRequest request) {
 
+
         var token = authService.verifyRecoveryCode(
                 request.getCode(),
+                request.getDeviceInfo(),
                 request.getNewDeviceFingerprint()
         );
 

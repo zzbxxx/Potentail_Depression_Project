@@ -229,9 +229,9 @@ async function onSubmit() {
     ElMessage.warning('请至少选择一个事件类别和一种情绪～')
     return
   }
-  
+  let userId = localStorage.getItem("userId") || localStorage.getItem("user_id")
   const payload = {
-    userId: 1, // TODO: 从登录状态获取用户ID
+    userId: userId, 
     moodVector: { ...form.intensities },
     events: [...selectedEvents.value],
     text: form.text.trim()

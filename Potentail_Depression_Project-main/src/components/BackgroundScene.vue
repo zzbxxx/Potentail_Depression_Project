@@ -131,7 +131,7 @@ function setupAudioControls() {
     // 移除已有的事件监听器，避免重复绑定
     audioControl.removeEventListener('click', handleAudioControl)
     function handleAudioControl(event) {
-      event.stopPropagation() // 防止点击事件冒泡到 document
+      event.stopPropagation() 
       console.log('音频控制点击，当前状态:', bgMusic.paused ? '暂停' : '播放', 'currentTime:', bgMusic.currentTime)
       if (bgMusic.paused) {
         showLoading()

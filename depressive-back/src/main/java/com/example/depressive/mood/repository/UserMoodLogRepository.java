@@ -14,4 +14,6 @@ public interface UserMoodLogRepository extends JpaRepository<UserMoodLog, Long> 
     List<UserMoodLog> findTop5ByUserIdOrderByDateDesc(Long userId);
 
     boolean existsByUserId(Long userId);
+
+    List<UserMoodLog> findByUserId(Long userId);
 }

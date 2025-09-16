@@ -102,13 +102,6 @@ const goToHome = () => {
   window.location.href = '/'
 }
 
-// const demo = reactive({
-//   cover: '', 
-//   title: '',
-//   author: '',
-//   desc: ''
-// });
-
 async function onAddToList() {
   submitting.value = true
   try {
@@ -127,15 +120,6 @@ async function goToDateLog() {
 async function goToEmail(){
   router.push('/email-compotent')
 }
-// async function getCardInfo() {
-//   const { bookTitle, author, quoteText } = await MoodApiService.getTodayCard();
-//   Object.assign(demo, {
-//     cover: 'src/assets/image/FT.jpg',
-//     title: bookTitle,
-//     author,
-//     desc: quoteText
-//   });
-// }
 
 const getButtonElement = async () => {
   if (!buttonRef.value) return null
@@ -176,7 +160,6 @@ onMounted(async () => {
   
   await nextTick()
   buttonElement.value = await getButtonElement();
-  getCardInfo();
 })
 
 const toggleRecoveryCode = () => {

@@ -16,13 +16,13 @@ import java.util.List;
 public class CardController {
     private final CardService service;
 
-    @GetMapping("/today")
+    @GetMapping("/getCardToday")
     public CardResp today(@RequestParam Long userId,@RequestParam(defaultValue = "false") Boolean guest) {
         System.out.println("today:"+userId);
         return service.todayCard(userId, guest);
     }
 
-    @GetMapping("/history")
+    @GetMapping("/cardHistory")
     public List<CardResp> history(@RequestParam Long userId) {
         return service.history(userId);
     }

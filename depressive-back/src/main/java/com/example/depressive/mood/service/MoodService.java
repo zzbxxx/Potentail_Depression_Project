@@ -1,6 +1,7 @@
 package com.example.depressive.mood.service;
 
 import com.example.depressive.mood.dto.MoodReq;
+import com.example.depressive.mood.dto.MoodResp;
 import com.example.depressive.mood.entity.UserMoodLog;
 import com.example.depressive.mood.repository.UserMoodLogRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -9,18 +10,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class MoodService {
     private final UserMoodLogRepository moodRepo;
-
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     public void saveMood(MoodReq req) throws JsonProcessingException {
         LocalDate today = LocalDate.now();
         if (moodRepo.existsByUserIdAndDate(req.getUserId(), today)) return;
 
-        // 计算 primaryMood（支持多种，例如强度最高的前 2 个）
         List<String> primaryMoods = calculatePrimaryMoods(req.getMoodVector());
 
         UserMoodLog log = new UserMoodLog();
@@ -47,4 +49,17 @@ public class MoodService {
                 .toList();
     }
 
+    public List<MoodResp> getMoodHistory(Long userId) {
+        // 查询用户的所有心情记录
+        List<UserMoodLog> moods = moodRepo.findByUserId(userId);
+
+        return moods.stream().map(mood -> {
+            MoodResp resp = new MoodResp();
+            resp.setText(mood.getText());
+            resp.setDate(mood.getDate() != null ? mood.getDate().format(formatter) : null);
+            resp.setPrimaryMood(mood.getPrimaryMood());
+            resp.setEvents(mood.getEvents());
+            return resp;
+        }).collect(Collectors.toList());
+    }
 }

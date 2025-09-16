@@ -23,8 +23,8 @@ export default class DeviceApiService {
     }
 
     static async verifyRecoveryCode(request) {
+
         try {
-            console.log("Sending recovery request:", JSON.stringify(request, null, 2));
             const response = await fetch(`${this.BASE_URL}/recover`, {
                 method: 'POST',
                 credentials: 'include',
@@ -34,6 +34,7 @@ export default class DeviceApiService {
                 body: JSON.stringify({
                     code: request.code.trim(),
                     newDeviceFingerprint: request.newDeviceFingerprint,
+                    deviceInfo: `${navigator.userAgent} | ${screen.width}x${screen.height}`
                 })
             });
 

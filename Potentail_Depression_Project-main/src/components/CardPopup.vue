@@ -62,7 +62,6 @@ import CardBack from './InnerCard/CardBack.vue'
 import { ElButton, ElTooltip } from 'element-plus'
 import { Close, Memo, Collection } from '@element-plus/icons-vue'
 
-// 更新 MoodState 接口以支持多选
 interface MoodState {
   events?: string[]
   moods?: string[]

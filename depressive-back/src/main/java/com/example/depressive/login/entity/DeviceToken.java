@@ -30,7 +30,7 @@ public class DeviceToken {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(name = "device_info")
-    private String deviceInfo;
+    @Column(name = "device_info", nullable = false)
+    private String deviceInfo = "Unknown Device";
 
 }
