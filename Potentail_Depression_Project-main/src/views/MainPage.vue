@@ -28,12 +28,12 @@
 
       <el-button 
         type="primary" 
-        class="email-btn"
+        class="personal-btn"
         @click="goToEmail"
         :icon="Clock " 
       >
         <span>
-          邮箱
+          个人信息
         </span>
       </el-button>
 
@@ -118,7 +118,7 @@ async function goToDateLog() {
   router.push('/mood-log')
 }
 async function goToEmail(){
-  router.push('/email-compotent')
+  router.push('/personal-compotent')
 }
 
 const getButtonElement = async () => {
@@ -144,7 +144,6 @@ function handleCardSelect(card, index) {
   }
 }
 
-// 修复watch函数
 watch([showRecoveryCode, buttonRef], async ([newShowVal, newButtonVal]) => {
   if (newButtonVal) {
     buttonElement.value = await getButtonElement()
@@ -197,7 +196,7 @@ const toggleRecoveryCode = () => {
   left: 20px;
   z-index: 1000;
 }
-.email-btn{
+.personal-btn{
   position: fixed;
   right: 2rem;
   top: 4rem;
@@ -209,7 +208,7 @@ const toggleRecoveryCode = () => {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.email-btn:hover {
+.personal-btn:hover {
   background: linear-gradient(135deg, #0d2b4e 0%, #1a5f9c 100%);
   transform: translateY(-2px);
 }

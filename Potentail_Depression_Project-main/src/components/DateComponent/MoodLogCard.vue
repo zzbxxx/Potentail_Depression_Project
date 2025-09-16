@@ -13,17 +13,6 @@
         <p v-if="moodData.events" class="events">事件: {{ moodData.events }}</p>
       </div>
     </section>
-
-    <footer class="card-footer">
-      <el-button
-        type="primary"
-        size="small"
-        class="calm-btn"
-        @click="$emit('primary')"
-      >
-        保存心情
-      </el-button>
-    </footer>
   </article>
 </template>
 

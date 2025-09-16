@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AuthPage from '../views/AuthPage.vue'
 import MainPage from '../views/MainPage.vue'
 import MoodLog from '../views/MoodLog.vue'
-import EmailComponent from '../views/EmailComponent.vue'
+import PersonalCompotent from '../views/PersonalCompotent.vue'
 import NotFound from '../views/MessageCode/NotFound404.vue'
 
 // @ts-ignore
@@ -27,9 +27,9 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
-        path: '/email-compotent',
-        name: 'EmailComponent',
-        component: EmailComponent,
+        path: '/personal-compotent',
+        name: 'PersonalCompotent',
+        component: PersonalCompotent,
         meta: { requiresAuth: true }
     },
     {
