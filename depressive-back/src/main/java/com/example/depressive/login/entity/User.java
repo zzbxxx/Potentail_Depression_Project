@@ -42,7 +42,14 @@ public class User implements UserDetails {
     @Column(name = "device_info")
     private String deviceInfo;
 
-    // 实现UserDetails接口方法需要调整
+    @Column(name = "nickname")
+    private String nickname;
+
+    @Column(name = "email") // 新增 email 字段，可为空
+    private String email;
+
+    @Column(name = "avatar") // 新增 avatar 字段，可为空
+    private String avatar;
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return Collections.emptyList();

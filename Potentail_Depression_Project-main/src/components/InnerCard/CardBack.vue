@@ -166,7 +166,6 @@ const form = reactive({
 
 // 当选择情绪时，初始化强度值
 watch(selectedMoods, (newMoods, oldMoods) => {
-  // 为新选择的情绪初始化强度值
   newMoods.forEach((mood) => {
     if (!(mood in form.intensities)) {
       form.intensities[mood] = 0.5 // 默认强度为 50%

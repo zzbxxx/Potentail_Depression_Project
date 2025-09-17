@@ -27,6 +27,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/card/**").permitAll()
                         .requestMatchers("/api/mood/**").permitAll()
+                        .requestMatchers("/api/picture/**").permitAll()
+                        .requestMatchers("api/userMessage/**").permitAll()
                         .anyRequest().authenticated()
 
                 )
@@ -38,7 +40,7 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
 
