@@ -29,6 +29,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/mood/**").permitAll()
                         .requestMatchers("/api/picture/**").permitAll()
                         .requestMatchers("api/userMessage/**").permitAll()
+                        .requestMatchers("/api/articles/**").permitAll()
                         .anyRequest().authenticated()
 
                 )

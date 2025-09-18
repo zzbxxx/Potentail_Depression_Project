@@ -4,7 +4,7 @@ import MainPage from '../views/MainPage.vue'
 import MoodLog from '../views/MoodLog.vue'
 import PersonalCompotent from '../views/PersonalCompotent.vue'
 import NotFound from '../views/MessageCode/NotFound404.vue'
-
+import Editror from '../views/Editor.vue'
 // @ts-ignore
 import { useAudioStore } from '../stores/audio'
 
@@ -18,6 +18,12 @@ const routes = [
         path: '/main',
         name: 'MainPage',
         component: MainPage,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/editor',
+        name: 'Editror',
+        component: Editror,
         meta: { requiresAuth: true }
     },
     {

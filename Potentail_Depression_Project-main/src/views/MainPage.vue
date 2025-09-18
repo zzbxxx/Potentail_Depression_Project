@@ -1,6 +1,5 @@
 <template>
   <div class="MainPage">
-    <!-- 找回码组件 -->
     <div class="edit-button-wrapper">
       <el-button
         ref="buttonRef"
@@ -13,7 +12,6 @@
         {{ showRecoveryCode ? '收起找回码' : '打开找回码' }}
       </el-button>
     </div>
-
 
       <el-button 
         type="primary" 
@@ -34,6 +32,17 @@
       >
         <span>
           个人信息
+        </span>
+      </el-button>
+
+      <el-button 
+        type="primary" 
+        class="editor-btn"
+        @click="gotoEditor"
+        :icon="Clock " 
+      >
+        <span>
+          編輯文章
         </span>
       </el-button>
 
@@ -70,7 +79,6 @@
     @open="onOpen"
     @close="onClose"
   />
-  
 
   <div style="background-color: aliceblue; ">
     <HelpComponent />
@@ -100,6 +108,10 @@ const isAccountLogin = ref(true)
 const submitting = ref(false)
 const goToHome = () => {
   window.location.href = '/'
+}
+
+function gotoEditor(){
+  router.push('/editor')
 }
 
 async function onAddToList() {
@@ -200,6 +212,17 @@ const toggleRecoveryCode = () => {
   position: fixed;
   right: 2rem;
   top: 4rem;
+  z-index: 21000;
+  width: 6rem;
+  background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e0f2fe;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.editor-btn{
+  position: fixed;
+  right: 2rem;
+  top: 8rem;
   z-index: 21000;
   width: 6rem;
   background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);

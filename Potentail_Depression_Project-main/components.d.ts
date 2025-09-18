@@ -8,6 +8,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ArticlePreview: typeof import('./src/components/Editor/ArticlePreview.vue')['default']
     BackgroundScene: typeof import('./src/components/BackgroundScene.vue')['default']
     BookMask: typeof import('./src/components/bookMask.vue')['default']
     CardBack: typeof import('./src/components/InnerCard/CardBack.vue')['default']
@@ -16,6 +17,7 @@ declare module 'vue' {
     CardLog: typeof import('./src/components/DateComponent/CardLog.vue')['default']
     CardLogCard: typeof import('./src/components/DateComponent/CardLogCard.vue')['default']
     CardPopup: typeof import('./src/components/CardPopup.vue')['default']
+    Editor: typeof import('./src/components/Editor/Editor.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCalendar: typeof import('element-plus/es')['ElCalendar']
@@ -49,6 +51,9 @@ declare module 'vue' {
     EmailManagement: typeof import('./src/components/PersonalCenter/EmailManagement.vue')['default']
     HelpComponent: typeof import('./src/components/HelpComponent.vue')['default']
     'HelpComponent.': typeof import('./src/components/HelpComponent..vue')['default']
+    ImageBlock: typeof import('./src/components/Editor/ImageBlock.vue')['default']
+    ImageUploadPreview: typeof import('./src/components/Editor/ImageUploadPreview.vue')['default']
+    LinkBlock: typeof import('./src/components/Editor/LinkBlock.vue')['default']
     MessageTip: typeof import('./src/components/tip/messageTip.vue')['default']
     MoodCalendar: typeof import('./src/components/DateComponent/MoodCalendar.vue')['default']
     MoodLog: typeof import('./src/components/DateComponent/MoodLog.vue')['default']
@@ -56,5 +61,7 @@ declare module 'vue' {
     RecoveryCode: typeof import('./src/components/RecoveryCode.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    TextBlock: typeof import('./src/components/Editor/TextBlock.vue')['default']
+    Toolbar: typeof import('./src/components/Editor/Toolbar.vue')['default']
   }
 }
