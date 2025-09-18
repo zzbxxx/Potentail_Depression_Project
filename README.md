@@ -5,15 +5,12 @@ This project is designed for people with potential depression.
 
 ## 技术栈 | Tech Stack
 
-| 模块 | Module             | 技术 | Technology         |
-|------|--------------------|------|--------------------|
-| 后端 | Backend            | Spring Boot | Spring Boot        |
-| 前端 | Frontend           | Vue 3 | Vue 3              |
-| 前端组件库 | UI Library       | Element Plus | Element Plus       |
-| 状态管理 | State Management  | Pinia | Pinia              |
-| 数据库 | Database          | MySQL + Redis | MySQL + Redis      |
-| 文件上传服务 | File Storage     | AWS Backblaze | AWS Backblaze      |
-| 部署方式 | Deployment        | Docker容器（Ubuntu）| Docker containers (Ubuntu) |
+| 模块 | Module             | 技术(Language/Framework) |
+|------|--------------------|------|
+| 后端 | Backend            | Spring Boot |
+| 前端 | Frontend           | Vue 3 |
+| 数据库 | Database          | MySQL + Redis |
+| 文件上传服务 | File Storage     | AWS Backblaze |
 
 ## 补充说明 | Additional Notes
 
