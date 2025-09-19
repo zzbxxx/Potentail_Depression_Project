@@ -5,6 +5,7 @@ import MoodLog from '../views/MoodLog.vue'
 import PersonalCompotent from '../views/PersonalCompotent.vue'
 import NotFound from '../views/MessageCode/NotFound404.vue'
 import Editror from '../views/Editor.vue'
+import DetailPage from '../views/DetailPage.vue'
 // @ts-ignore
 import { useAudioStore } from '../stores/audio'
 
@@ -36,6 +37,12 @@ const routes = [
         path: '/personal-compotent',
         name: 'PersonalCompotent',
         component: PersonalCompotent,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/detail',
+        name: 'DetailPage',
+        component: DetailPage,
         meta: { requiresAuth: true }
     },
     {

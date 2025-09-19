@@ -69,7 +69,7 @@ import TextBlock from '/src/components/Editor/TextBlock.vue';
 import ImageBlock from '/src/components/Editor/ImageBlock.vue';
 import { ElInput, ElIcon, ElButton, ElSelect, ElOption, ElMessage, ElLoading } from 'element-plus';
 import { Rank } from '@element-plus/icons-vue';
-
+import ArticleService from '/src/api/articleApi';
 const title = ref('');
 const articleType = ref('');
 const blocks = ref([]);
@@ -138,53 +138,39 @@ const saveContent = async () => {
     background: 'rgba(0, 0, 0, 0.7)',
   });
 
-  const data = {
-    userId: parseInt(userId),
-    title: title.value,
-    articleType: articleType.value,
-    topics: topics.value,
-    blocks: blocks.value.map(block => {
-      if (block.type === 'link') {
-        return { type: 'link', text: block.text, url: block.url };
-      }
-      return {
-        type: block.type,
-        content: block.type === 'text' ? block.content : block.url
-      };
-    })
-  };
-
-  const formData = new FormData();
-  formData.append('article', new Blob([JSON.stringify(data)], { type: 'application/json' }));
-  imageFiles.value.forEach((file, index) => {
-    if (file) {
-      formData.append('images', file);
-    }
-  });
-
   try {
-    const response = await fetch('http://localhost:8080/api/articles/putArticleData', {
-      method: 'POST',
-      body: formData
-    });
-    if (!response.ok) {
-      let errorMessage;
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || '未知錯誤';
-      } catch {
-        errorMessage = await response.text() || '網絡錯誤';
+    const data = {
+      userId: parseInt(userId),
+      title: title.value,
+      articleType: articleType.value,
+      topics: topics.value,
+      blocks: blocks.value.map(block => {
+        if (block.type === 'link') {
+          return { type: 'link', text: block.text, url: block.url };
+        }
+        return {
+          type: block.type,
+          content: block.type === 'text' ? block.content : block.url
+        };
+      })
+    };
+
+    const formData = new FormData();
+    formData.append('article', new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    imageFiles.value.forEach((file, index) => {
+      if (file) {
+        formData.append('images', file);
       }
-      throw new Error(errorMessage);
-    }
-    const result = await response.json();
+    });
+
+    // 直接调用 API 服务，不需要再处理 response
+    const result = await ArticleService.putArticleData(formData);
     ElMessage.success('文章保存成功！');
     console.log('保存成功:', result);
   } catch (error) {
     console.error('保存失敗:', error.message);
     ElMessage.error('文章保存失敗：' + error.message);
   } finally {
-    // 無論成功或失敗，關閉 loading
     loading.close();
   }
 };

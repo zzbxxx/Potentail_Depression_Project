@@ -80,6 +80,10 @@
     @close="onClose"
   />
 
+  <AnnoHole
+    v-model="annoShow"
+  />
+
   <div style="background-color: aliceblue; ">
     <HelpComponent />
   </div>
@@ -94,7 +98,7 @@ import CardGallery3D from '../components/CardGallery3D.vue'
 import CardPopup from '../components/CardPopup.vue'
 import { useRouter } from 'vue-router'
 import MoodApiService from '../api/moodApi.js'
-
+import AnnoHole from '../components/AnnoHole.vue'
 import todayCardImage from '../assets/image/today-card.jpg'
 import anonCardImage from '../assets/image/anon-card.jpg'
 import progressCardImage from '../assets/image/progress-card.jpg'
@@ -106,6 +110,7 @@ const clickCount = ref(0)
 const show = ref(false)
 const isAccountLogin = ref(true)
 const submitting = ref(false)
+const annoShow = ref(false)
 const goToHome = () => {
   window.location.href = '/'
 }
@@ -151,6 +156,13 @@ function handleCardSelect(card, index) {
     }
   } else if (card.id === 'anon') {
     // 打开树洞
+    console.log(11);
+    
+     clickCount.value++
+    if (clickCount.value === 2) {
+      annoShow.value = true
+      clickCount.value = 0
+    }
   } else if (card.id === 'progress') {
     // 打开进展
   }

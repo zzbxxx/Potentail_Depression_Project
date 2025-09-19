@@ -51,7 +51,6 @@ const demo = reactive({
 });
 
 async function getCardInfo() {
-  try {
     const { bookTitle, author, quoteText } = await MoodApiService.getTodayCard();
     Object.assign(demo, {
       cover: 'src/assets/image/FT.jpg',
@@ -59,9 +58,6 @@ async function getCardInfo() {
       author,
       desc: quoteText
     });
-  } catch (error) {
-    console.error('获取卡片数据失败:', error);
-  }
 }
 getCardInfo();
 </script>

@@ -8,6 +8,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    AnnoHole: typeof import('./src/components/AnnoHole.vue')['default']
     ArticlePreview: typeof import('./src/components/Editor/ArticlePreview.vue')['default']
     BackgroundScene: typeof import('./src/components/BackgroundScene.vue')['default']
     BookMask: typeof import('./src/components/bookMask.vue')['default']
@@ -17,8 +18,10 @@ declare module 'vue' {
     CardLog: typeof import('./src/components/DateComponent/CardLog.vue')['default']
     CardLogCard: typeof import('./src/components/DateComponent/CardLogCard.vue')['default']
     CardPopup: typeof import('./src/components/CardPopup.vue')['default']
+    DetailPage: typeof import('./src/components/article/DetailPage.vue')['default']
     Editor: typeof import('./src/components/Editor/Editor.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
+    ElAvatar: typeof import('element-plus/es')['ElAvatar']
     ElButton: typeof import('element-plus/es')['ElButton']
     ElCalendar: typeof import('element-plus/es')['ElCalendar']
     ElCard: typeof import('element-plus/es')['ElCard']
@@ -28,6 +31,9 @@ declare module 'vue' {
     ElContainer: typeof import('element-plus/es')['ElContainer']
     ElDialog: typeof import('element-plus/es')['ElDialog']
     ElDrawer: typeof import('element-plus/es')['ElDrawer']
+    ElDropdown: typeof import('element-plus/es')['ElDropdown']
+    ElDropdownItem: typeof import('element-plus/es')['ElDropdownItem']
+    ElDropdownMenu: typeof import('element-plus/es')['ElDropdownMenu']
     ElEmpty: typeof import('element-plus/es')['ElEmpty']
     ElForm: typeof import('element-plus/es')['ElForm']
     ElFormItem: typeof import('element-plus/es')['ElFormItem']
@@ -38,7 +44,9 @@ declare module 'vue' {
     ElMain: typeof import('element-plus/es')['ElMain']
     ElMenu: typeof import('element-plus/es')['ElMenu']
     ElMenuItem: typeof import('element-plus/es')['ElMenuItem']
+    ElPopover: typeof import('element-plus/es')['ElPopover']
     ElRow: typeof import('element-plus/es')['ElRow']
+    ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
     ElSlider: typeof import('element-plus/es')['ElSlider']
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']

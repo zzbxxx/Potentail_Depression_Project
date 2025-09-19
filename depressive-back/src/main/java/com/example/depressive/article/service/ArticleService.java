@@ -1,17 +1,18 @@
 package com.example.depressive.article.service;
-
-import com.example.depressive.article.dto.ArticleDTO;
+import com.example.depressive.article.dto.ArticleReq;
+import com.example.depressive.article.dto.ArticleResp;
 import com.example.depressive.article.entity.Article;
+import com.example.depressive.article.entity.ArticleType;
 import com.example.depressive.article.entity.Topic;
 import com.example.depressive.article.repository.ArticleRepository;
 import com.example.depressive.article.repository.TopicRepository;
 import com.example.depressive.login.entity.User;
 import com.example.depressive.login.repository.UserRepository;
+import com.example.depressive.util.S3Util;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.owasp.html.HtmlPolicyBuilder;
 import org.owasp.html.PolicyFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class ArticleService {
@@ -52,14 +54,8 @@ public class ArticleService {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @Value("${backblaze.b2.bucket-name}")
-    private String bucketName;
-
-    @Value("${backblaze.b2.bucket-type}")
-    private String bucketType;
-
-    @Value("${backblaze.b2.region}")
-    private String region;
+    @Autowired
+    private S3Util s3Util;
 
     private final PolicyFactory htmlSanitizer = new HtmlPolicyBuilder()
             .allowElements("p", "strong", "em", "a", "br")
@@ -67,7 +63,7 @@ public class ArticleService {
             .toFactory();
 
     @Transactional
-    public Article createArticle(ArticleDTO articleDTO, MultipartFile[] images) throws IOException {
+    public Article createArticle(ArticleReq articleDTO, MultipartFile[] images) throws IOException {
         // 驗證 userId
         System.out.println("article:" + articleDTO);
         User user = userRepository.findById(articleDTO.getUserId())
@@ -94,15 +90,13 @@ public class ArticleService {
         // 處理塊內容並替換圖片 blob URL
         List<Map<String, String>> processedBlocks = new ArrayList<>();
         int imageIndex = 0;
-        for (ArticleDTO.BlockDTO block : articleDTO.getBlocks()) {
+        for (ArticleReq.BlockDTO block : articleDTO.getBlocks()) {
             Map<String, String> blockMap = new HashMap<>();
             blockMap.put("type", block.getType());
             if ("text".equals(block.getType())) {
-                // 過濾文本防止 XSS
                 String sanitizedContent = htmlSanitizer.sanitize(block.getContent());
                 blockMap.put("content", sanitizedContent);
             } else if ("image".equals(block.getType())) {
-                // 驗證是否有對應的圖片文件
                 if (imageIndex >= images.length) {
                     throw new IllegalArgumentException("圖片文件數量不足");
                 }
@@ -110,18 +104,18 @@ public class ArticleService {
                 if (!image.getContentType().startsWith("image/") || image.getSize() > 2 * 1024 * 1024) {
                     throw new IllegalArgumentException("圖片格式無效或大小超過 2MB");
                 }
-                // 上傳到 Backblaze B2
                 String fileName = "articles/" + Instant.now().toEpochMilli() + "-" + image.getOriginalFilename();
-                String contentType = getContentTypeFromFileName(image.getOriginalFilename());
+                String contentType = s3Util.getContentTypeFromFileName(image.getOriginalFilename());
                 PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                        .bucket(bucketName)
+                        .bucket(s3Util.getBucketName())
                         .key(fileName)
                         .contentType(contentType)
                         .build();
                 s3Client.putObject(putObjectRequest, software.amazon.awssdk.core.sync.RequestBody.fromBytes(image.getBytes()));
-                String imageUrl = "allPublic".equals(bucketType)
-                        ? String.format("https://f%s.backblazeb2.com/file/%s/%s", region.substring(region.length() - 3), bucketName, fileName)
-                        : generatePresignedUrl(fileName);
+                String imageUrl = s3Util.generatePublicUrl(fileName);
+                if (imageUrl == null) {
+                    imageUrl = generatePresignedUrl(fileName);
+                }
                 blockMap.put("content", imageUrl);
             } else if ("link".equals(block.getType())) {
                 blockMap.put("content", block.getContent());
@@ -134,7 +128,7 @@ public class ArticleService {
         article.setUser(user);
         article.setTitle(articleDTO.getTitle());
         try {
-            article.setArticleType(Article.ArticleType.valueOf(articleDTO.getArticleType().toUpperCase()));
+            article.setArticleType(ArticleType.valueOf(articleDTO.getArticleType().toUpperCase()));
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("無效的文章類型: " + articleDTO.getArticleType());
         }
@@ -144,7 +138,7 @@ public class ArticleService {
 
         // 保存到數據庫
         Article savedArticle = articleRepository.save(article);
-//[{"type": "text", "content": "<p>《西西弗斯》</p>"}, {"type": "image", "content": "https://s3.us-east-005.backblazeb2.com/Potential-Depressive-Bucket/articles/1758198135573-FT.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20250918T122217Z&X-Amz-SignedHeaders=host&X-Amz-Credential=00502081ecf03510000000002%2F20250918%2Fus-east-005%2Fs3%2Faws4_request&X-Amz-Expires=3600&X-Amz-Signature=4e2000bf1239f7adaf3e03adfd61086f9e08dfc3d6c8a8aa946fc8d62ef59b99"}, {"type": "image", "content": "https://s3.us-east-005.backblazeb2.com/Potential-Depressive-Bucket/articles/1758198137325-ReSleep.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Date=20250918T122217Z&X-Amz-SignedHeaders=host&X-Amz-Credential=00502081ecf03510000000002%2F20250918%2Fus-east-005%2Fs3%2Faws4_request&X-Amz-Expires=3600&X-Amz-Signature=0c7a5026c21b0244021f79db6e3b3780616abd1028b338e7d753ef1667a2d052"}]
+
         // 緩存到 Redis
         try {
             String json = objectMapper.writeValueAsString(savedArticle);
@@ -153,7 +147,7 @@ public class ArticleService {
                 redisTemplate.opsForZSet().add("topics:" + topic.getId() + ":articles", String.valueOf(savedArticle.getId()), System.currentTimeMillis());
             }
         } catch (Exception e) {
-            // 日誌記錄，緩存失敗不影響保存
+            System.err.println("緩存文章失敗: " + e.getMessage());
         }
 
         return savedArticle;
@@ -161,24 +155,77 @@ public class ArticleService {
 
     private String generatePresignedUrl(String key) {
         software.amazon.awssdk.services.s3.model.GetObjectRequest getObjectRequest = software.amazon.awssdk.services.s3.model.GetObjectRequest.builder()
-                .bucket(bucketName)
+                .bucket(s3Util.getBucketName())
                 .key(key)
                 .build();
         return s3Presigner.presignGetObject(r -> r.signatureDuration(Duration.ofHours(1)).getObjectRequest(getObjectRequest)).url().toString();
     }
 
-    private String getContentTypeFromFileName(String fileName) {
-        String extension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
-        switch (extension) {
-            case "jpg":
-            case "jpeg":
-                return "image/jpeg";
-            case "png":
-                return "image/png";
-            case "gif":
-                return "image/gif";
-            default:
-                return "application/octet-stream";
-        }
+    @Transactional(readOnly = true)
+    public List<ArticleResp> getAllArticles() throws IOException {
+        // 從數據庫獲取所有文章
+        List<Article> articles = articleRepository.findAll();
+
+        // 轉換為 DTO 列表
+        return articles.stream().map(article -> {
+            // 嘗試從 Redis 獲取緩存
+            String cacheKey = "article:" + article.getId();
+            Article cachedArticle = null;
+            try {
+                String cachedJson = redisTemplate.opsForValue().get(cacheKey);
+                if (cachedJson != null) {
+                    cachedArticle = objectMapper.readValue(cachedJson, Article.class);
+                }
+            } catch (Exception e) {
+                System.err.println("從 Redis 讀取文章失敗: " + e.getMessage());
+            }
+
+            // 如果無緩存，使用數據庫數據
+            Article targetArticle = cachedArticle != null ? cachedArticle : article;
+
+            // 獲取用戶信息
+            User user = targetArticle.getUser();
+            if (user == null) {
+                throw new IllegalArgumentException("文章無關聯用戶: " + targetArticle.getId());
+            }
+
+            // 轉換為 DTO
+            ArticleResp dto = new ArticleResp();
+            dto.setId(targetArticle.getId());
+            dto.setTitle(targetArticle.getTitle());
+            dto.setArticleType(targetArticle.getArticleType().name().toLowerCase());
+            dto.setTopics(targetArticle.getTopics().stream()
+                    .map(Topic::getName)
+                    .collect(Collectors.toSet()));
+            try {
+                dto.setBlocks(targetArticle.getContentAsJson().stream()
+                        .map(block -> {
+                            ArticleResp.BlockDTO blockDTO = new ArticleResp.BlockDTO();
+                            blockDTO.setType(block.get("type"));
+                            blockDTO.setContent(block.get("content"));
+                            return blockDTO;
+                        })
+                        .collect(Collectors.toList()));
+            } catch (IOException e) {
+                throw new RuntimeException("解析文章內容失敗: " + targetArticle.getId(), e);
+            }
+            dto.setStatus(targetArticle.getStatus().name());
+            dto.setCreatedAt(targetArticle.getCreatedAt());
+            dto.setNickname(user.getNickname());
+            dto.setAvatar(user.getAvatar());
+            dto.setUserId(user.getId());
+
+            // 如果 Redis 無緩存，更新緩存
+            if (cachedArticle == null) {
+                try {
+                    String json = objectMapper.writeValueAsString(targetArticle);
+                    redisTemplate.opsForValue().set(cacheKey, json, 3600, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    System.err.println("緩存文章失敗: " + e.getMessage());
+                }
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 }

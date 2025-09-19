@@ -34,6 +34,7 @@ export default class MoodApiService {
     }
 
     static async getCardHistoryInfo() {
+        let userId = localStorage.getItem("userId") || localStorage.getItem("user_id")
 
         const res = await fetch(`${this.BASE_URL}/cardHistory?userId=${userId}`, {
             method: 'GET',

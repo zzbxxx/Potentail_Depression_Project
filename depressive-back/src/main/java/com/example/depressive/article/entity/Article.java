@@ -1,14 +1,19 @@
 package com.example.depressive.article.entity;
 
+import com.example.depressive.article.converter.ArticleTypeConverter;
 import com.example.depressive.login.entity.User;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Entity
@@ -29,7 +34,7 @@ public class Article {
     @Column(name = "title", nullable = false, length = 255)
     private String title;
 
-    @Enumerated(EnumType.STRING)
+    @Convert(converter = ArticleTypeConverter.class)
     @Column(name = "article_type", nullable = false)
     private ArticleType articleType;
 
@@ -57,21 +62,16 @@ public class Article {
     // JSON 序列化/反序列化方法
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    // 獲取 content 為 JSON 對象
-    public Object getContentAsJson() throws JsonProcessingException {
-        return objectMapper.readValue(content, Object.class);
+    public List<Map<String, String>> getContentAsJson() throws IOException {
+        return objectMapper.readValue(content, new TypeReference<List<Map<String, String>>>() {});
     }
 
-    // 設置 content 為 JSON 字符串
     public void setContentFromJson(Object content) throws JsonProcessingException {
         this.content = objectMapper.writeValueAsString(content);
     }
 
-    public enum ArticleType {
-        NEWS, BLOG, TUTORIAL, REVIEW
-    }
-
     public enum ArticleStatus {
-        DRAFT, PUBLISHED
+        DRAFT,
+        PUBLISHED
     }
 }
