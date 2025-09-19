@@ -116,14 +116,12 @@ const toggleMenu = (article) => {
   menuVisible[id] = !menuVisible[id]
 }
 
-/* ---------- 点空白收拢 ---------- */
 const closeAllMenu = () => {
   Object.keys(menuVisible).forEach(k => (menuVisible[k] = false))
 }
 onMounted(() => document.addEventListener('click', closeAllMenu))
 onBeforeUnmount(() => document.removeEventListener('click', closeAllMenu))
 
-/* ---------- 三项功能 ---------- */
 const report = (article) => {
   ElMessage.warning(`已举报文章 ${article.id}`)
   menuVisible[article.id] = false
@@ -156,8 +154,6 @@ onMounted(() => {
   getInfo()
 })
 
-const router = useRouter()
-
 const props = defineProps({
   modelValue: {
     type: Boolean,
@@ -174,9 +170,9 @@ watch(() => props.modelValue, (newVal) => {
 const close = () => {
   emit('update:modelValue', false)
 }
-
+const router = useRouter()
 const openDetail = (article) => {
-  // router.push({ name: 'DetailPage', params: { id: article.id } })
+  router.push({ name: 'DetailPage', params: { id: article.id } })
   ElMessage.info(`跳转到文章 ${article.id} 的详情页`)
 }
 

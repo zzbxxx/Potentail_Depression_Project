@@ -2,6 +2,25 @@ export default class PersonalMessageApi {
     static BASE_URL = 'http://localhost:8080/api/picture';
     static EMAIL_BASE_URL = 'http://localhost:8080/api/email';
 
+    static async getPersonalInfo() {
+        const userId = localStorage.getItem('userId') || localStorage.getItem('user_id');
+        if (!userId) throw new Error('缺少 userId');
+
+        const res = await fetch(
+            `http://localhost:8080/api/userMessage/personal?userId=${userId}`,
+            {
+                method: 'GET',
+                headers: { Accept: 'application/json' },
+            }
+        );
+
+        const json = await res.json();
+        console.log(json);
+
+
+        return json;
+    }
+
     static async getPicturePresignedUrl(fileName, fileType) {
         try {
             const url = new URL(`${this.BASE_URL}/get-presigned-url`);

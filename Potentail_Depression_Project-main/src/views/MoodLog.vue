@@ -140,6 +140,7 @@ const noDataMessage = computed(() => {
 <style scoped>
 /* 样式保持不变 */
 .MoodLog {
+  background: linear-gradient(135deg, #e6f0fa 0%, #f5e6e8 100%);
   padding: 1rem;
   text-align: center;
   background-color: #f5f7fa;

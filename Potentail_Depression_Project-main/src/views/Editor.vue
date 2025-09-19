@@ -1,62 +1,63 @@
 <template>
-  <div class="editor-container">
-    <!-- Article Type and Topic Selection in the same row -->
-    <div class="flex flex-row gap-4 mb-4">
-      <el-select v-model="articleType" placeholder="選擇文章類型" class="w-1/2">
-        <el-option label="新聞" value="news" />
-        <el-option label="博客" value="blog" />
-        <el-option label="教程" value="tutorial" />
-        <el-option label="評論" value="review" />
-      </el-select>
+  <div class="editor-background">
+    <div class="editor-container">
+      <div class="flex flex-row gap-4 mb-4">
+        <el-select v-model="articleType" placeholder="選擇文章類型" class="w-1/2">
+          <el-option label="新聞" value="news" />
+          <el-option label="博客" value="blog" />
+          <el-option label="教程" value="tutorial" />
+          <el-option label="評論" value="review" />
+        </el-select>
 
-      <el-select
-        v-model="topics"
-        multiple
-        filterable
-        allow-create
-        default-first-option
-        :max="3"
-        placeholder="選擇或輸入話題（最多3個）"
-        class="w-1/2"
-        @change="handleTopicChange"
-      >
-        <el-option v-for="item in topicOptions" :key="item" :label="item" :value="item" />
-      </el-select>
-    </div>
+        <el-select
+          v-model="topics"
+          multiple
+          filterable
+          allow-create
+          default-first-option
+          :max="3"
+          placeholder="選擇或輸入話題（最多3個）"
+          class="w-1/2"
+          @change="handleTopicChange"
+        >
+          <el-option v-for="item in topicOptions" :key="item" :label="item" :value="item" />
+        </el-select>
+      </div>
 
-    <!-- Title Input -->
-    <el-input v-model="title" placeholder="輸入標題" class="mb-4" />
+      <!-- Title Input -->
+      <el-input v-model="title" placeholder="輸入標題" class="mb-4" />
 
-    <!-- Toolbar -->
-    <Toolbar 
-      @add-text="addTextBlock" 
-      @add-image="addImageBlock" 
-      @add-link="addLinkBlock" 
-      @save="saveContent" 
-      @preview="togglePreview" 
-    />
-    
-    <!-- Editor Content -->
-    <div class="editor-content">
-      <draggable v-model="blocks" item-key="id" handle=".drag-handle">
-        <template #item="{ element, index }">
-          <div class="block">
-            <el-icon class="drag-handle" :size="20"><Rank /></el-icon>
-            <el-button type="text" @click="removeBlock(index)" class="float-right">刪除</el-button>
-            <TextBlock 
-              v-if="element.type === 'text'" 
-              :model-value="element.content" 
-              @update:model-value="value => updateBlockContent(index, value)" 
-            />
-            <ImageBlock 
-              v-if="element.type === 'image'" 
-              :model-value="element.url" 
-              @update:model-value="value => updateBlockContent(index, { url: value })" 
-              @upload="file => handleImageUpload(index, file)"
-            />
-          </div>
-        </template>
-      </draggable>
+      <!-- Toolbar -->
+      <Toolbar 
+        @add-text="addTextBlock" 
+        @add-image="addImageBlock" 
+        @add-link="addLinkBlock" 
+        @save="saveContent" 
+        @preview="togglePreview" 
+      />
+      
+      <!-- Editor Content -->
+      <div class="editor-content">
+        <draggable v-model="blocks" item-key="id" handle=".drag-handle">
+          <template #item="{ element, index }">
+            <div class="block">
+              <el-icon class="drag-handle" :size="20"><Rank /></el-icon>
+              <el-button type="text" @click="removeBlock(index)" class="float-right">刪除</el-button>
+              <TextBlock 
+                v-if="element.type === 'text'" 
+                :model-value="element.content" 
+                @update:model-value="value => updateBlockContent(index, value)" 
+              />
+              <ImageBlock 
+                v-if="element.type === 'image'" 
+                :model-value="element.url" 
+                @update:model-value="value => updateBlockContent(index, { url: value })" 
+                @upload="file => handleImageUpload(index, file)"
+              />
+            </div>
+          </template>
+        </draggable>
+      </div>
     </div>
   </div>
 </template>
@@ -177,9 +178,15 @@ const saveContent = async () => {
 </script>
 
 <style scoped>
+.editor-background{
+  background: linear-gradient(135deg, #e6f0fa 0%, #f5e6e8 100%);
+  height: 100vh;
+  padding-top: 40px;
+}
 .editor-container {
   max-width: 800px;
-  margin: 0 auto;
+  margin: auto;
+  margin-top: 40px;
   padding: 20px;
   background-color: #f0f9ff;
   border-radius: 8px;

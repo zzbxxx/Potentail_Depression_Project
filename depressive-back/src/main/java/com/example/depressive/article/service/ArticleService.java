@@ -228,4 +228,75 @@ public class ArticleService {
             return dto;
         }).collect(Collectors.toList());
     }
+
+    @Transactional(readOnly = true)
+    public List<ArticleResp> getArticlesByArticleId(Long articleId) throws IOException {
+        // 验证 articleId 是否有效
+        if (articleId == null || articleId <= 0) {
+            throw new IllegalArgumentException("无效的文章 ID: " + articleId);
+        }
+
+        // 尝试从 Redis 获取缓存
+        String cacheKey = "article:" + articleId;
+        Article cachedArticle = null;
+        try {
+            String cachedJson = redisTemplate.opsForValue().get(cacheKey);
+            if (cachedJson != null) {
+                cachedArticle = objectMapper.readValue(cachedJson, Article.class);
+            }
+        } catch (Exception e) {
+            System.err.println("从 Redis 读取文章失败: " + e.getMessage());
+        }
+
+        // 如果缓存中没有，查询数据库
+        Article article;
+        if (cachedArticle != null) {
+            article = cachedArticle;
+        } else {
+            article = articleRepository.findById(articleId)
+                    .orElseThrow(() -> new IllegalArgumentException("文章不存在: " + articleId));
+            // 缓存到 Redis
+            try {
+                String json = objectMapper.writeValueAsString(article);
+                redisTemplate.opsForValue().set(cacheKey, json, 3600, TimeUnit.SECONDS);
+            } catch (Exception e) {
+                System.err.println("缓存文章失败: " + e.getMessage());
+            }
+        }
+
+        // 验证用户信息
+        User user = article.getUser();
+        if (user == null) {
+            throw new IllegalArgumentException("文章无关联用户: " + article.getId());
+        }
+
+        // 转换为 ArticleResp DTO
+        ArticleResp dto = new ArticleResp();
+        dto.setId(article.getId());
+        dto.setTitle(article.getTitle());
+        dto.setArticleType(article.getArticleType().name().toLowerCase());
+        dto.setTopics(article.getTopics().stream()
+                .map(Topic::getName)
+                .collect(Collectors.toSet()));
+        try {
+            dto.setBlocks(article.getContentAsJson().stream()
+                    .map(block -> {
+                        ArticleResp.BlockDTO blockDTO = new ArticleResp.BlockDTO();
+                        blockDTO.setType(block.get("type"));
+                        blockDTO.setContent(block.get("content"));
+                        return blockDTO;
+                    })
+                    .collect(Collectors.toList()));
+        } catch (IOException e) {
+            throw new RuntimeException("解析文章内容失败: " + article.getId(), e);
+        }
+        dto.setStatus(article.getStatus().name());
+        dto.setCreatedAt(article.getCreatedAt());
+        dto.setNickname(user.getNickname());
+        dto.setAvatar(user.getAvatar());
+        dto.setUserId(user.getId());
+
+        // 返回单篇文章的列表
+        return Collections.singletonList(dto);
+    }
 }

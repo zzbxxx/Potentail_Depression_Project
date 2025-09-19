@@ -44,16 +44,11 @@ public class S3Util {
         return null; // 非公開桶需使用預簽名 URL
     }
 
-    /**
-     * 獲取 bucketName
-     */
+
     public String getBucketName() {
         return bucketName;
     }
 
-    /**
-     * 獲取 bucketType
-     */
     public String getBucketType() {
         return bucketType;
     }

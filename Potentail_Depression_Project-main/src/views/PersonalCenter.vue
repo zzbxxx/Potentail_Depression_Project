@@ -81,18 +81,20 @@
           <transition name="fade">
             <div v-if="activeTab === 'profile'">
               <h3>信息设置</h3>
-              <el-form 
-                :model="user" 
-                :rules="formRules" 
-                ref="profileForm" 
-                label-width="120px"
-              >
+
+              <!-- 数据没回来前先骨架 -->
+              <el-skeleton :rows="3" animated v-if="!user" />
+
+              <!-- 数据回来后正常渲染 -->
+              <el-form v-else :model="user" :rules="formRules" ref="profileForm" label-width="120px">
                 <el-form-item label="用户名" prop="nickname">
-                  <el-input v-model="user.nickname" placeholder="请输入用户名"></el-input>
+                  <el-input v-model="user.nickname" placeholder="请输入用户名" />
                 </el-form-item>
+
                 <el-form-item label="绑定邮箱" prop="email">
-                  <el-input v-model="user.email" placeholder="请输入邮箱"></el-input>
+                  <el-input v-model="user.email" placeholder="请输入邮箱" />
                 </el-form-item>
+
                 <el-form-item label="头像">
                   <el-upload
                     action="#"
@@ -104,14 +106,17 @@
                   >
                     <el-button type="primary" :loading="uploading">上传头像</el-button>
                   </el-upload>
-                  <el-image 
-                    v-if="previewAvatar || user.avatar" 
-                    :src="previewAvatar || user.avatar" 
-                    style="width: 50px; height: 50px; border-radius: 50%; margin-top: 10px;" 
+
+                  <!-- 头像预览 -->
+                  <el-image
+                    v-if="previewAvatar || user.avatar"
+                    :src="previewAvatar || user.avatar"
+                    style="width: 50px; height: 50px; border-radius: 50%; margin-top: 10px;"
                     fit="cover"
                     :preview-src-list="[previewAvatar || user.avatar]"
                   />
                 </el-form-item>
+
                 <el-form-item>
                   <el-button type="primary" @click="saveProfile">保存</el-button>
                 </el-form-item>
@@ -196,8 +201,8 @@ const isMobile = ref(window.innerWidth <= 768);
 const drawerVisible = ref(false);
 const activeMenu = ref('profile');
 const activeTab = ref('profile');
-const previewAvatar = ref(''); //本地預覽
-const user = ref({ nickname: '用户示例', email: '', avatar: '' });
+const previewAvatar = ref(''); 
+const user = ref(null);
 const favorites = ref([
   { id: 1, title: '收藏项1', image: 'https://via.placeholder.com/150' },
   { id: 2, title: '收藏项2', image: 'https://via.placeholder.com/150' },
@@ -229,10 +234,22 @@ const emailFile = ref(null);
 const uploading = ref(false);
 const emailUploading = ref(false);
 
+const fetchUserInfo = async () => {
+  try {
+    const data = await PersonalMessageApi.getPersonalInfo()
+    user.value = data 
+  } catch (e) {
+    console.error(e)
+    ElMessage.error('获取用户信息失败')
+  }
+}
+
 onMounted(() => {
   window.addEventListener('resize', () => {
     isMobile.value = window.innerWidth <= 768;
   });
+
+  fetchUserInfo();
 });
 
 const switchTab = (tab) => {

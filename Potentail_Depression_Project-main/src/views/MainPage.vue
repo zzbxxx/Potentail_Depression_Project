@@ -135,7 +135,7 @@ async function goToDateLog() {
   router.push('/mood-log')
 }
 async function goToEmail(){
-  router.push('/personal-compotent')
+  router.push('/personal-center')
 }
 
 const getButtonElement = async () => {
@@ -201,11 +201,8 @@ const toggleRecoveryCode = () => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background:
-    linear-gradient(135deg,
-      rgba(220, 229, 243, 0.9) 0%,
-      rgba(228, 232, 237, 0.9) 100%),
-    url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="none" stroke="%23A3C1E0" stroke-width="0.5"/></svg>');
+  background: linear-gradient(135deg, #e6f0fa 0%, #f5e6e8 100%);
+
   background-size: auto, 100px 100px;
   background-attachment: fixed;
   transition: all 0.5s ease;

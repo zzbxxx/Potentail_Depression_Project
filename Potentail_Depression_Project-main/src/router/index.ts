@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AuthPage from '../views/AuthPage.vue'
 import MainPage from '../views/MainPage.vue'
 import MoodLog from '../views/MoodLog.vue'
-import PersonalCompotent from '../views/PersonalCompotent.vue'
+import PersonalCenter from '../views/PersonalCenter.vue'
 import NotFound from '../views/MessageCode/NotFound404.vue'
 import Editror from '../views/Editor.vue'
 import DetailPage from '../views/DetailPage.vue'
@@ -34,16 +34,16 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
-        path: '/personal-compotent',
-        name: 'PersonalCompotent',
-        component: PersonalCompotent,
+        path: '/personal-center',
+        name: 'PersonalCenter',
+        component: PersonalCenter,
         meta: { requiresAuth: true }
     },
     {
-        path: '/detail',
+        path: '/detail/:id',
         name: 'DetailPage',
         component: DetailPage,
-        meta: { requiresAuth: true }
+        meta: { requiresAuth: true },
     },
     {
         path: '/:pathMatch(.*)*',

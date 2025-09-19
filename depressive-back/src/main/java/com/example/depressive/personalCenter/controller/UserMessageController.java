@@ -3,6 +3,7 @@ package com.example.depressive.personalCenter.controller;
 import com.example.depressive.login.entity.User;
 import com.example.depressive.login.repository.UserRepository;
 import com.example.depressive.personalCenter.UserMessageRepository.UserMessageRepository;
+import com.example.depressive.personalCenter.dto.PersonalResp;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +18,22 @@ public class UserMessageController {
     @Autowired
     private UserRepository userRepository;
 
+    @GetMapping("/personal")
+    public ResponseEntity<PersonalResp> getPersonal(@RequestParam Long userId) {
+        // 1. 查库
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
+
+        // 2. 组装 VO
+        PersonalResp resp = new PersonalResp();
+        resp.setNickname(user.getNickname());
+        resp.setAvatar(user.getAvatar());
+        resp.setEmail(user.getEmail());
+
+        // 3. 返回
+        return ResponseEntity.ok(resp);
+    }
+
     @PutMapping("/profile")
     public ResponseEntity<Map<String, Object>> updateProfile(@RequestParam String userId, @RequestBody User updatedUser) {
         Map<String, Object> response = new HashMap<>();
@@ -25,9 +42,6 @@ public class UserMessageController {
             User user = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("用户不存在"));
 
-            System.out.println("nickname"+updatedUser.getNickname());
-            System.out.println("email:"+updatedUser.getEmail());
-            // 更新允许的字段
             if (updatedUser.getNickname() != null && !updatedUser.getNickname().isEmpty()) {
                 user.setNickname(updatedUser.getNickname());
             }

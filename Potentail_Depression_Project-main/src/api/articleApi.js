@@ -26,4 +26,10 @@ export default class ArticleService {
         }
         return response.json();
     }
+
+    static async getArticleData(articleId) {
+        const response = await fetch(`/${this.BASE_URL}/getDataInfoByArticleId?ArticleId=${articleId}`);
+        return response.json();
+    }
 }
+

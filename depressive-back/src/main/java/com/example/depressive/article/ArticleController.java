@@ -36,4 +36,10 @@ public class ArticleController {
         List<ArticleResp> articles = articleService.getAllArticles();
         return ResponseEntity.ok(articles);
     }
+
+    @GetMapping("/getDataInfoByArticleId")
+    public ResponseEntity<List<ArticleResp>> getArticlesByArticleId(@RequestParam Long ArticleId) throws IOException {
+        List<ArticleResp> articles = articleService.getArticlesByArticleId(ArticleId);
+        return ResponseEntity.ok(articles);
+    }
 }

@@ -9,7 +9,9 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AnnoHole: typeof import('./src/components/AnnoHole.vue')['default']
+    ArticleDisplay: typeof import('./src/components/article/ArticleDisplay.vue')['default']
     ArticlePreview: typeof import('./src/components/Editor/ArticlePreview.vue')['default']
+    AuthorInfo: typeof import('./src/components/article/AuthorInfo.vue')['default']
     BackgroundScene: typeof import('./src/components/BackgroundScene.vue')['default']
     BookMask: typeof import('./src/components/bookMask.vue')['default']
     CardBack: typeof import('./src/components/InnerCard/CardBack.vue')['default']
@@ -18,6 +20,7 @@ declare module 'vue' {
     CardLog: typeof import('./src/components/DateComponent/CardLog.vue')['default']
     CardLogCard: typeof import('./src/components/DateComponent/CardLogCard.vue')['default']
     CardPopup: typeof import('./src/components/CardPopup.vue')['default']
+    CommentSection: typeof import('./src/components/article/CommentSection.vue')['default']
     DetailPage: typeof import('./src/components/article/DetailPage.vue')['default']
     Editor: typeof import('./src/components/Editor/Editor.vue')['default']
     ElAside: typeof import('element-plus/es')['ElAside']
@@ -47,6 +50,7 @@ declare module 'vue' {
     ElPopover: typeof import('element-plus/es')['ElPopover']
     ElRow: typeof import('element-plus/es')['ElRow']
     ElScrollbar: typeof import('element-plus/es')['ElScrollbar']
+    ElSkeleton: typeof import('element-plus/es')['ElSkeleton']
     ElSlider: typeof import('element-plus/es')['ElSlider']
     ElTable: typeof import('element-plus/es')['ElTable']
     ElTableColumn: typeof import('element-plus/es')['ElTableColumn']
@@ -67,6 +71,7 @@ declare module 'vue' {
     MoodLog: typeof import('./src/components/DateComponent/MoodLog.vue')['default']
     MoodLogCard: typeof import('./src/components/DateComponent/MoodLogCard.vue')['default']
     RecoveryCode: typeof import('./src/components/RecoveryCode.vue')['default']
+    ReviewPage: typeof import('./src/components/article/ReviewPage.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     TextBlock: typeof import('./src/components/Editor/TextBlock.vue')['default']

@@ -15,9 +15,9 @@ public class ArticleResp {
     private List<BlockDTO> blocks;
     private String status;
     private LocalDateTime createdAt;
-    private String nickname; // 用戶暱稱
-    private String avatar;   // 用戶頭像
-    private Long userId;    // 用戶 ID
+    private String nickname;
+    private String avatar;
+    private Long userId;
 
     @Data
     public static class BlockDTO {
