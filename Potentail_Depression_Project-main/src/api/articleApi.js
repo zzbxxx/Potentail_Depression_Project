@@ -1,6 +1,20 @@
+import { log } from "three/src/nodes/TSL.js";
+
 export default class ArticleService {
 
     static BASE_URL = "api/articles"
+
+    static REPLY_BASE_URL = "api/reply"
+
+    static async putArticleReplyInfo(data) {
+        const response = fetch(`${this.REPLY_BASE_URL}/putReply`, {
+            method: 'PUT',
+            body: data
+        })
+        console.log("response:" + response);
+
+        return response.data;
+    }
 
     static async getAllArticles() {
 

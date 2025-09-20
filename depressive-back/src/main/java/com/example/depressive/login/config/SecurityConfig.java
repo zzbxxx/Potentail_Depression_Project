@@ -30,6 +30,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/picture/**").permitAll()
                         .requestMatchers("api/userMessage/**").permitAll()
                         .requestMatchers("/api/articles/**").permitAll()
+                        .requestMatchers("/api/reply/**").permitAll()
                         .anyRequest().authenticated()
 
                 )

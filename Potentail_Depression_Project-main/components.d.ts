@@ -8,6 +8,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    ActionBar: typeof import('./src/components/article/ActionBar.vue')['default']
     AnnoHole: typeof import('./src/components/AnnoHole.vue')['default']
     ArticleDisplay: typeof import('./src/components/article/ArticleDisplay.vue')['default']
     ArticlePreview: typeof import('./src/components/Editor/ArticlePreview.vue')['default']
@@ -70,7 +71,9 @@ declare module 'vue' {
     MoodCalendar: typeof import('./src/components/DateComponent/MoodCalendar.vue')['default']
     MoodLog: typeof import('./src/components/DateComponent/MoodLog.vue')['default']
     MoodLogCard: typeof import('./src/components/DateComponent/MoodLogCard.vue')['default']
+    OperationSection: typeof import('./src/components/article/OperationSection.vue')['default']
     RecoveryCode: typeof import('./src/components/RecoveryCode.vue')['default']
+    ReplySection: typeof import('./src/components/article/ReplySection.vue')['default']
     ReviewPage: typeof import('./src/components/article/ReviewPage.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']

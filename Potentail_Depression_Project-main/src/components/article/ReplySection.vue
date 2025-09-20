@@ -49,7 +49,7 @@ const props = defineProps({
     type: [String, Number],
     required: true
   },
-  authorId: { // 新增 authorId 属性，用于判断当前用户是否为作者
+  authorId: { 
     type: [String, Number],
     required: true
   }
@@ -122,10 +122,7 @@ const submitComment = async () => {
       id: comments.value.length + 1,
       articleId: props.articleId,
       userId: localStorage.getItem('user_id'),
-      nickname: '当前用户', // 假设从用户数据获取
-      avatar: defaultAvatar,
       content: newComment.value,
-      createdAt: new Date().toISOString()
     }
     comments.value.push(newCommentData) // 添加到假数据
     ElMessage.success('留言发送成功')

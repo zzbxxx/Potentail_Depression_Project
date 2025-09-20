@@ -1,4 +1,3 @@
-<!-- AnnoHole.vue -->
 <template>
   <div
     class="overlay"
@@ -67,32 +66,25 @@
               <span class="time">{{ formatTime(article.createdAt) }}</span>
             </div>
 
-            <div class="action-bar">
-              <el-button size="small" @click="like(article)" :type="article.liked ? 'primary' : 'default'">
-                赞同 {{ article.likes || 0 }}
-              </el-button>
-              <el-button size="small" text @click="favorite(article)">
-                收藏
-              </el-button>
-              <el-button size="small" text @click="share(article)">
-                分享
-              </el-button>
-              <el-button size="small" text @click="love(article)">
-                喜欢 {{ article.loves || 0 }}
-              </el-button>
-              <div class="more-box">
-                    <el-button size="small" text @click.stop="toggleMenu(article)">
-                    <el-icon><MoreFilled /></el-icon>
-                    </el-button>
-
-                    <!-- 原生弹出层 -->
-                    <div v-show="menuVisible[article.id]" class="more-menu" @click.stop>
-                    <div class="more-item" @click="report(article)">举报</div>
-                    <div class="more-item" @click="dislikeArticle(article)">不喜欢文章</div>
-                    <div class="more-item" @click="dislikeAuthor(article)">不喜欢作者</div>
-                    </div>
-                </div>
-            </div>
+            <ActionBar
+              :article="article"
+              :show-actions="{
+                like: true,
+                favorite: true,
+                share: true,
+                love: true,
+                more: true
+              }"
+              :gap="8"
+              @like="like"
+              @favorite="favorite"
+              @share="share"
+              @love="love"
+              @report="report"
+              @dislikeArticle="dislikeArticle"
+              @dislikeAuthor="dislikeAuthor"
+              @toggleMenu="val => toggleMenu(article, val)"
+            />
           </el-card>
         </div>
       </el-scrollbar>
@@ -101,19 +93,19 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted,reactive,onBeforeUnmount  } from 'vue'
+import { ref, watch, onMounted, reactive, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { MoreFilled } from '@element-plus/icons-vue'
+import ActionBar from '/src/components/article/ActionBar.vue'
 import ArticleService from '../api/articleApi.js'
-const menuVisible = reactive({}) 
+
+const menuVisible = reactive({})
 const articles = ref([])
 
-const toggleMenu = (article) => {
+const toggleMenu = (article, val) => {
   const id = article.id
-  // 先全部关掉，再切换当前
   Object.keys(menuVisible).forEach(k => (menuVisible[k] = false))
-  menuVisible[id] = !menuVisible[id]
+  menuVisible[id] = val
 }
 
 const closeAllMenu = () => {
@@ -124,21 +116,17 @@ onBeforeUnmount(() => document.removeEventListener('click', closeAllMenu))
 
 const report = (article) => {
   ElMessage.warning(`已举报文章 ${article.id}`)
-  menuVisible[article.id] = false
 }
 const dislikeArticle = (article) => {
   ElMessage.info(`将减少类似文章 ${article.id} 的推荐`)
-  menuVisible[article.id] = false
 }
 const dislikeAuthor = (article) => {
   ElMessage.info(`将减少作者 ${article.nickname || '匿名'} 的内容`)
-  menuVisible[article.id] = false
 }
 
 async function getInfo() {
   try {
     const res = await ArticleService.getAllArticles()
-    // 给每篇文章加初始状态
     articles.value = res.map(a => ({
       ...a,
       likes: 0,
@@ -176,7 +164,6 @@ const openDetail = (article) => {
   ElMessage.info(`跳转到文章 ${article.id} 的详情页`)
 }
 
-// 操作方法
 const like = (article) => {
   if (!article.liked) {
     article.likes++
@@ -188,14 +175,9 @@ const like = (article) => {
 }
 const love = (article) => {
   article.loves++
-  ElMessage.success('已喜欢~')
 }
-const share = (article) => {
-  ElMessage.success(`分享文章 ${article.id}`)
-}
-const favorite = (article) => {
-  ElMessage.success(`收藏文章 ${article.id}`)
-}
+const share = (article) => {}
+const favorite = (article) => {}
 
 const firstTextBlock = (article) => {
   const block = article.blocks?.find(b => b.type === 'text')
@@ -282,28 +264,8 @@ const formatTime = (t) => {
   font-size: 12px;
   color: #666;
 }
-.action-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 12px;
-  border-top: 1px solid #f0f0f0;
-  padding-top: 8px;
-}
 .time {
   color: #999;
-}
-.el-dropdown-link {
-  cursor: pointer;
-  color: #666;
-  display: flex;
-  align-items: center;
-  padding: 4px;
-}
-.el-dropdown-link:hover {
-  color: #000;
-  background-color: #f5f5f5;
-  border-radius: 4px;
 }
 @media (max-width: 768px) {
   .anno-hole {
@@ -314,35 +276,5 @@ const formatTime = (t) => {
   .article-title {
     font-size: 16px;
   }
-}
-
-/* 更多按钮容器 */
-.more-box {
-  position: relative;
-  display: inline-block;
-}
-
-/* 弹出菜单 */
-.more-menu {
-  position: absolute;
-  right: 0;
-  bottom: 100%;
-  margin-bottom: 4px;
-  background: #fff;
-  border: 1px solid #e4e7ed;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,.15);
-  padding: 4px 0;
-  z-index: 10;
-  white-space: nowrap;
-}
-.more-item {
-  padding: 6px 16px;
-  font-size: 14px;
-  color: #606266;
-  cursor: pointer;
-}
-.more-item:hover {
-  background: #f5f7fa;
 }
 </style>
