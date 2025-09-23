@@ -72,6 +72,8 @@ public class Article {
 
     public enum ArticleStatus {
         DRAFT,
-        PUBLISHED
+        PUBLISHED,
+        APPROVED,
+        REJECTED
     }
 }

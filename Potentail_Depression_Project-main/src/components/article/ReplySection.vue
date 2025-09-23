@@ -1,215 +1,268 @@
+<!-- ReplySection.vue -->
 <template>
-  <div class="comment-section">
-    <h3>私密留言</h3>
-    <p class="intro-text">这里是与作者的私密交流空间，你的留言只有作者能看到，安心分享你的想法吧！</p>
-    
-    <!-- 提交评论 -->
-    <div class="comment-form">
+  <div class="reply-section flat-style">
+    <h3 class="reply-title">私密留言板</h3>
+    <p class="intro-text">这是一个与作者的私密交流空间，仅作者可见，放心分享你的想法！</p>
+
+    <!-- 顶层留言输入框 -->
+    <div class="reply-form-card">
       <el-input
-        v-model="newComment"
+        v-model="newReply"
         type="textarea"
         :rows="4"
-        placeholder="写下你的支持或想法，只有作者能看到"
+        placeholder="写下你的支持或想法（仅作者可见，最多500字）"
         maxlength="500"
         show-word-limit
+        class="reply-input"
       />
       <el-button
         type="primary"
-        :disabled="!newComment.trim() || submitting"
-        @click="submitComment"
+        :disabled="!newReply.trim() || submitting"
+        @click="submitReply"
         class="submit-btn"
+        :loading="submitting"
       >
         {{ submitting ? '发送中...' : '发送留言' }}
       </el-button>
     </div>
 
-    <!-- 评论列表（仅作者可见） -->
-    <div v-if="isAuthor" class="comment-list">
-      <el-card v-for="comment in comments" :key="comment.id" class="comment-item">
-        <div class="comment-header">
-          <el-avatar :size="40" :src="comment.avatar || defaultAvatar" />
-          <span class="nickname">{{ comment.nickname || '匿名' }}</span>
-          <span class="created-at">{{ formatDate(comment.createdAt) }}</span>
-        </div>
-        <p class="comment-content">{{ comment.content }}</p>
-      </el-card>
-      <p v-if="!comments.length" class="no-comments">暂无留言</p>
+    <!-- 留言列表（父 + 子都平铺展示） -->
+    <div class="reply-list">
+      <div
+        v-for="reply in flatReplies"
+        :key="reply.id"
+        class="reply-card"
+      >
+        <ReplyItem :reply="reply" :parentNickname="reply.parentNickname" />
+      </div>
+      <p v-if="!flatReplies.length" class="no-replys">暂无留言，赶紧成为第一个留言的人吧！</p>
     </div>
-    <p v-else class="non-author-tip">你的留言已发送，只有作者能看到所有留言内容。</p>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
-// import CommentService from '/src/api/commentApi'
+import { ref, onMounted, provide } from 'vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+import ArticleService from '/src/api/articleApi';
+import ReplyItem from './ReplyItem.vue';
 
 const props = defineProps({
-  articleId: {
-    type: [String, Number],
-    required: true
-  },
-  authorId: { 
-    type: [String, Number],
-    required: true
-  }
-})
+  articleId: { type: [String, Number], required: true },
+  authorId: { type: [String, Number], required: true },
+});
 
-const newComment = ref('')
-const comments = ref([])
-const submitting = ref(false)
-const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d395c9d8b2e3e3f1f2c8e7b2f7.png'
-const isAuthor = ref(false)
+const newReply = ref('');
+const replyTree = ref([]);
+const flatReplies = ref([]);
+const submitting = ref(false);
+const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d395c9d8b2e3e3f1f2c8e7b2f7.png';
+const isAuthor = ref(false);
 
-// 假数据
-const mockComments = [
-  {
-    id: 1,
-    articleId: props.articleId,
-    userId: 55,
-    nickname: '支持者A',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d395c9d8b2e3e3f1f2c8e7b2f7.png',
-    content: '你的文章让我感到很温暖，谢谢分享！',
-    createdAt: '2025-09-18T20:15:07'
-  },
-  {
-    id: 2,
-    articleId: props.articleId,
-    userId: 55,
-    nickname: '支持者B',
-    avatar: 'https://cube.elemecdn.com/0/88/03b0d395c9d8b2e3e3f1f2c8e7b2f7.png',
-    content: '希望你一切都好，有什么想聊的随时说哦！',
-    createdAt: '2025-09-18T20:30:00'
-  }
-]
+const showReplyForm = ref({});
+const nestedReplyContent = ref({});
+const submittingNested = ref({});
 
-// 检查当前用户是否为作者
 const checkIsAuthor = () => {
-  const currentUserId = localStorage.getItem('user_id')
-  isAuthor.value = currentUserId && currentUserId == props.authorId
-}
+  const currentUserId = localStorage.getItem('user_id') || localStorage.getItem('userId');
+  isAuthor.value = currentUserId && currentUserId == props.authorId;
+};
 
-// 获取评论列表（仅作者可见）
-const fetchComments = async () => {
-  if (!isAuthor.value) {
-    comments.value = [] // 非作者不显示评论
-    return
-  }
-  try {
-    // 暂时使用假数据
-    comments.value = mockComments
-    // 实际后端接口调用（注释掉，待后端实现）
-    /*
-    const response = await CommentService.getPrivateComments(props.articleId, localStorage.getItem('user_id'))
-    comments.value = response.data
-    */
-  } catch (error) {
-    console.error('获取留言失败:', error)
-    ElMessage.error('获取留言失败')
-  }
-}
+const canDeleteReply = (replyUserId) => {
+  const currentUserId = localStorage.getItem('user_id') || localStorage.getItem('userId');
+  return currentUserId && (currentUserId == replyUserId || isAuthor.value);
+};
 
-// 提交评论
-const submitComment = async () => {
-  if (!newComment.value.trim()) {
-    ElMessage.warning('留言内容不能为空')
-    return
-  }
-  submitting.value = true
-  try {
-    // 模拟提交评论
-    const newCommentData = {
-      id: comments.value.length + 1,
-      articleId: props.articleId,
-      userId: localStorage.getItem('user_id'),
-      content: newComment.value,
+// 拉平树状结构
+const flatten = (list, parentNickname = '') => {
+  return list.reduce((acc, item) => {
+    acc.push({ ...item, parentNickname });
+    if (item.children?.length) {
+      acc.push(...flatten(item.children, item.nickname));
     }
-    comments.value.push(newCommentData) // 添加到假数据
-    ElMessage.success('留言发送成功')
-    newComment.value = ''
+    return acc;
+  }, []);
+};
 
-    // 实际后端接口调用（注释掉，待后端实现）
-    /*
-    await CommentService.submitPrivateComment({
-      articleId: props.articleId,
-      content: newComment.value,
-      userId: localStorage.getItem('user_id')
-    })
-    ElMessage.success('留言发送成功')
-    newComment.value = ''
-    await fetchComments() // 刷新评论列表
-    */
-  } catch (error) {
-    console.error('发送留言失败:', error)
-    ElMessage.error('发送留言失败')
-  } finally {
-    submitting.value = false
+// 获取留言
+const fetchReplies = async () => {
+  try {
+    const userId = localStorage.getItem('user_id') || localStorage.getItem('userId');
+    if (!userId) {
+      ElMessage.warning('请登录后查看私密留言');
+      return;
+    }
+    const res = await ArticleService.getArticleReplyInfo(props.articleId, userId);
+    if (!res.success) throw new Error(res.message);
+
+    const flatReplys = res.data || [];
+    const replyMap = new Map();
+    flatReplys.forEach(r => {
+      r.children = [];
+      replyMap.set(r.id, r);
+    });
+
+    const roots = [];
+    flatReplys.forEach(r => {
+      if (!r.parentId) roots.push(r);
+      else replyMap.get(r.parentId)?.children.push(r);
+    });
+
+    replyTree.value = roots;
+    flatReplies.value = flatten(roots);
+  } catch (e) {
+    console.error(e);
+    ElMessage.error('获取留言失败：' + e.message);
   }
-}
+};
 
-// 格式化日期
-const formatDate = (dateString) => {
-  if (!dateString) return '未知'
-  const date = new Date(dateString)
-  return date.toLocaleString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
+// 顶层留言
+const submitReply = async () => {
+  if (!newReply.value.trim()) return ElMessage.warning('留言内容不能为空');
+  submitting.value = true;
+  try {
+    const userId = localStorage.getItem('user_id') || localStorage.getItem('userId');
+    const res = await ArticleService.putArticleReplyInfo({
+      userId,
+      articleId: props.articleId,
+      content: newReply.value,
+    });
+    fetchReplies();
+    newReply.value = '';
+    ElMessage.success('留言发送成功！');
+  } catch {
+    ElMessage.error('发送失败，请稍后重试');
+  } finally {
+    submitting.value = false;
+  }
+};
 
-// 初始化
+// 删除
+const confirmDeleteReply = async (id) => {
+  try {
+    await ElMessageBox.confirm('确定删除此留言吗？', '确认删除', {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning',
+    });
+    const userId = localStorage.getItem('user_id') || localStorage.getItem('userId');
+    const res = await ArticleService.deleteArticleReply(id, userId);
+    if (res.success) {
+      fetchReplies();
+      ElMessage.success('删除成功！');
+    }
+  } catch {
+    ElMessage.error('删除失败，请重试');
+  }
+};
+
+const toggleReplyForm = (id) => {
+  showReplyForm.value[id] = !showReplyForm.value[id];
+  if (!showReplyForm.value[id]) nestedReplyContent.value[id] = '';
+};
+
+const submitNestedReply = async (parentId) => {
+  if (!nestedReplyContent.value[parentId]?.trim()) return ElMessage.warning('回复不能为空');
+  submittingNested.value[parentId] = true;
+  try {
+    const userId = localStorage.getItem('user_id') || localStorage.getItem('userId');
+    await ArticleService.putArticleReplyInfo({
+      userId,
+      articleId: props.articleId,
+      content: nestedReplyContent.value[parentId],
+      parentId,
+    });
+    fetchReplies();
+    nestedReplyContent.value[parentId] = '';
+    showReplyForm.value[parentId] = false;
+    ElMessage.success('回复成功！');
+  } catch {
+    ElMessage.error('回复失败，请稍后重试');
+  } finally {
+    submittingNested.value[parentId] = false;
+  }
+};
+
+const formatDate = (str) => new Date(str).toLocaleString('zh-CN', {
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+});
+
+provide('replyContext', {
+  defaultAvatar,
+  formatDate,
+  toggleReplyForm,
+  canDeleteReply,
+  showReplyForm,
+  nestedReplyContent,
+  submittingNested,
+  submitNestedReply,
+  confirmDeleteReply,
+});
+
 onMounted(() => {
-  checkIsAuthor()
-  fetchComments()
-})
+  checkIsAuthor();
+  fetchReplies();
+});
 </script>
 
 <style scoped>
-.comment-section {
-  margin-top: 30px;
-  background: #f9f9f9;
+.reply-section.flat-style {
+  margin-top: 20px;
   padding: 20px;
+  background: #fff;
+  border: 1px solid #e1e1e1;
   border-radius: 8px;
 }
+
+.reply-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #e1e1e1;
+  padding-bottom: 8px;
+}
+
 .intro-text {
   color: #666;
   font-size: 14px;
-  margin-bottom: 20px;
+  margin-bottom: 15px;
 }
-.comment-form {
+
+.reply-form-card {
   margin-bottom: 20px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 4px;
+  border: 1px solid #eee;
 }
+
+.reply-input {
+  margin-bottom: 12px;
+}
+
 .submit-btn {
-  margin-top: 10px;
-  background: #67c23a;
-  border-color: #67c23a;
+  width: 100%;
 }
-.comment-list {
-  max-height: 400px;
+
+.reply-list {
+  max-height: 600px;
   overflow-y: auto;
 }
-.comment-item {
-  margin-bottom: 10px;
-  background: #fff;
+
+.reply-card {
+  margin-bottom: 12px;
 }
-.comment-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.nickname {
-  font-weight: bold;
-  color: #333;
-}
-.created-at {
-  color: #999;
-  font-size: 12px;
-}
-.comment-content {
-  margin: 0;
-  color: #555;
-}
-.no-comments, .non-author-tip {
+
+.no-replys {
   text-align: center;
   color: #999;
   font-size: 14px;
+  padding: 20px;
+  background: #f9f9f9;
+  border-radius: 4px;
 }
 </style>

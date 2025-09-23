@@ -7,13 +7,38 @@
     <div class="anno-hole">
       <div class="header">
         <h2>樹洞</h2>
-        <el-button type="danger" size="small" @click="close">关闭</el-button>
+        <div class="search-bar">
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索文章..."
+            clearable
+            @input="handleArticleSearch"
+            @clear="resetFilters"
+            style="width: 10rem;"
+          />
+          <el-select
+            v-model="selectedTopic"
+            multiple
+            placeholder="选择话题"
+            class="custom-select"
+            @change="handleTopicFilter"
+          >
+            <el-option
+              v-for="item in topicOptions"
+              :key="item"
+              :label="item"
+              :value="item"
+            />
+          </el-select>
+          <el-button type="danger" size="small" @click="close">关闭</el-button>
+        </div>
       </div>
 
+      <!-- 以下部分保持不变 -->
       <el-scrollbar height="calc(100% - 50px)">
         <div class="article-list">
           <el-card
-            v-for="article in articles"
+            v-for="article in filteredArticles"
             :key="article.id"
             shadow="hover"
             class="article-card"
@@ -25,7 +50,6 @@
                 size="small"
               />
               <span class="nickname">{{ article.nickname || '匿名' }}</span>
-
               <el-tag type="info" size="small" class="ml-2">
                 {{ article.articleType }}
               </el-tag>
@@ -39,9 +63,7 @@
                 {{ t }}
               </el-tag>
             </div>
-
             <h3 class="article-title">{{ article.title || '未命名标题' }}</h3>
-
             <div class="article-preview">
               <div
                 v-if="firstTextBlock(article)"
@@ -49,7 +71,6 @@
               >
                 {{ firstTextBlock(article) }}
               </div>
-
               <el-image
                 v-if="firstImageBlock(article)"
                 :src="firstImageBlock(article)"
@@ -58,14 +79,12 @@
                 lazy
               />
             </div>
-
             <div class="article-footer">
               <el-button text size="small" @click="openDetail(article)">
                 查看详情 &gt;
               </el-button>
               <span class="time">{{ formatTime(article.createdAt) }}</span>
             </div>
-
             <ActionBar
               :article="article"
               :show-actions="{
@@ -86,6 +105,9 @@
               @toggleMenu="val => toggleMenu(article, val)"
             />
           </el-card>
+          <p v-if="!filteredArticles.length" class="no-articles">
+            {{ searchQuery || selectedTopic ? '暂无匹配结果' : '暂无文章' }}
+          </p>
         </div>
       </el-scrollbar>
     </div>
@@ -93,7 +115,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, reactive, onBeforeUnmount } from 'vue'
+import { ref, watch, onMounted, reactive, onBeforeUnmount, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import ActionBar from '/src/components/article/ActionBar.vue'
@@ -101,6 +123,31 @@ import ArticleService from '../api/articleApi.js'
 
 const menuVisible = reactive({})
 const articles = ref([])
+const originalArticles = ref([])
+const searchQuery = ref('')
+const selectedTopic = ref([])
+const topicOptions = ref(["美食", "旅遊", "學習", "生活", "科技"])
+
+const filteredArticles = computed(() => {
+  let result = [...originalArticles.value]
+
+  if (selectedTopic.value.length > 0) {
+    result = result.filter(article =>
+      article.topics?.some(topic => selectedTopic.value.includes(topic))
+    )
+  }
+
+  if (searchQuery.value) {
+    const query = searchQuery.value.trim().toLowerCase()
+    result = result.filter(article => {
+      const titleMatch = article.title?.toLowerCase().includes(query)
+      const previewMatch = firstTextBlock(article).toLowerCase().includes(query)
+      return titleMatch || previewMatch
+    })
+  }
+
+  return result
+})
 
 const toggleMenu = (article, val) => {
   const id = article.id
@@ -126,16 +173,31 @@ const dislikeAuthor = (article) => {
 
 async function getInfo() {
   try {
-    const res = await ArticleService.getAllArticles()
-    articles.value = res.map(a => ({
+    const res = await ArticleService.getApprovedArticles()
+    originalArticles.value = res.map(a => ({
       ...a,
       likes: 0,
       loves: 0,
       liked: false
     }))
+    articles.value = [...originalArticles.value]
   } catch (e) {
     ElMessage.error('获取文章失败')
   }
+}
+
+function handleArticleSearch() {
+  // 搜索逻辑已移到computed中，通过searchQuery触发
+}
+
+function handleTopicFilter() {
+  // 过滤逻辑已移到computed中，通过selectedTopic触发
+}
+
+function resetFilters() {
+  searchQuery.value = ''
+  selectedTopic.value = []
+  articles.value = [...originalArticles.value]
 }
 
 onMounted(() => {
@@ -267,6 +329,14 @@ const formatTime = (t) => {
 .time {
   color: #999;
 }
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.custom-select {
+  width: 10rem;
+}
 @media (max-width: 768px) {
   .anno-hole {
     width: 100%;
@@ -275,6 +345,9 @@ const formatTime = (t) => {
   }
   .article-title {
     font-size: 16px;
+  }
+  .custom-select {
+    width: 8rem;
   }
 }
 </style>

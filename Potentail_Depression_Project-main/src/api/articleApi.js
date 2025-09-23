@@ -1,26 +1,39 @@
-import { log } from "three/src/nodes/TSL.js";
-
 export default class ArticleService {
-
-    static BASE_URL = "api/articles"
-
-    static REPLY_BASE_URL = "api/reply"
+    static BASE_URL = "api/articles";
+    static REPLY_BASE_URL = "api/reply";
 
     static async putArticleReplyInfo(data) {
-        const response = fetch(`${this.REPLY_BASE_URL}/putReply`, {
-            method: 'PUT',
-            body: data
-        })
-        console.log("response:" + response);
+        const { userId, ...replyData } = data;
+        const response = await fetch(`/${this.REPLY_BASE_URL}/putReply?userId=${userId}`, {
+            method: 'POST',
+            body: JSON.stringify(replyData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.json();
+    }
 
-        return response.data;
+    static async deleteArticleReply(replyId, userId) {
+        const response = await fetch(`/${this.REPLY_BASE_URL}/deleteReply?replyId=${replyId}&userId=${userId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.json();
+    }
+
+    static async getArticleReplyInfo(articleId, userId) {
+        const response = await fetch(`/${this.REPLY_BASE_URL}/getArticleReply?articleId=${articleId}&userId=${userId}`);
+        return response.json();
     }
 
     static async getAllArticles() {
-
         const response = await fetch(`${this.BASE_URL}/getAllArticles`);
         return response.json();
     }
+
 
     static async putArticleData(formData) {
         const response = await fetch(`${this.BASE_URL}/putArticleData`, {
@@ -32,9 +45,9 @@ export default class ArticleService {
             let errorMessage;
             try {
                 const errorData = await response.json();
-                errorMessage = errorData.message || errorData.error || '未知錯誤';
+                errorMessage = errorData.message || errorData.error || '未知错误';
             } catch {
-                errorMessage = await response.text() || '網絡錯誤';
+                errorMessage = await response.text() || '网络错误';
             }
             throw new Error(errorMessage);
         }
@@ -42,8 +55,47 @@ export default class ArticleService {
     }
 
     static async getArticleData(articleId) {
-        const response = await fetch(`/${this.BASE_URL}/getDataInfoByArticleId?ArticleId=${articleId}`);
+        const response = await fetch(`/${this.BASE_URL}/getDataInfoByArticleId?articleId=${articleId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.json();
+    }
+
+    static async updateArticleStatus(articleId, status) {
+        const response = await fetch(`/${this.BASE_URL}/updateStatus?articleId=${articleId}&status=${status}`, {
+            method: 'POST',
+        })
+        return response.json();
+    }
+
+    static async getApprovedArticles() {
+        const response = await fetch(`/${this.BASE_URL}/getApprovedArticles`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.json();
+    }
+    static async getPendingArticles() {
+        const response = await fetch(`/${this.BASE_URL}/getPendingArticles`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.json();
+    }
+    static async getRejectedArticles() {
+        const response = await fetch(`/${this.BASE_URL}/getRejectedArticles`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
         return response.json();
     }
 }
-

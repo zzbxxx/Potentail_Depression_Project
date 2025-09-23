@@ -46,6 +46,14 @@
         </span>
       </el-button>
 
+      <el-button
+          type="primary"
+          class="audit-bth"
+          @click="gotoAudit"
+          :icon="Clock"
+        >
+        <span>审核</span>
+      </el-button>
     <RecoveryCode
       v-model="showRecoveryCode" 
       :button-ref="buttonElement"
@@ -137,6 +145,10 @@ async function goToDateLog() {
 async function goToEmail(){
   router.push('/personal-center')
 }
+async function gotoAudit(){
+  router.push('/admin-control')
+}
+
 
 const getButtonElement = async () => {
   if (!buttonRef.value) return null
@@ -232,6 +244,17 @@ const toggleRecoveryCode = () => {
   position: fixed;
   right: 2rem;
   top: 8rem;
+  z-index: 21000;
+  width: 6rem;
+  background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e0f2fe;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.audit-bth{
+  position: fixed;
+  right: 2rem;
+  top: 12rem;
   z-index: 21000;
   width: 6rem;
   background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);

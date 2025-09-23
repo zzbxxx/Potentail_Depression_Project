@@ -5,6 +5,7 @@
       <span class="nickname">{{ author.nickname || '匿名' }}</span>
       <span class="created-at">{{ formatDate(author.createdAt) }}</span>
     </div>
+    <el-button class="follow-btn" type="text">关注</el-button>
   </div>
 </template>
 
@@ -54,5 +55,9 @@ const formatDate = (dateString) => {
 .created-at {
   color: #999;
   font-size: 12px;
+}
+.follow-btn {
+  margin-left: auto;
+  margin-right: 2rem;
 }
 </style>

@@ -78,10 +78,8 @@ const topics = ref([]);
 const imageFiles = ref([]); // 儲存圖片文件
 let blockId = 0;
 
-// Predefined topic options
 const topicOptions = ref(["美食", "旅遊", "學習", "生活", "科技"]);
 
-// Handle topic selection change to enforce max 3 topics
 const handleTopicChange = (selectedTopics) => {
   if (selectedTopics.length > 3) {
     topics.value = selectedTopics.slice(0, 3);

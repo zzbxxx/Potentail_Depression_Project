@@ -1,4 +1,5 @@
 package com.example.depressive.article.service;
+
 import com.example.depressive.article.dto.ArticleReq;
 import com.example.depressive.article.dto.ArticleResp;
 import com.example.depressive.article.entity.Article;
@@ -62,19 +63,19 @@ public class ArticleService {
             .allowAttributes("href").onElements("a")
             .toFactory();
 
+    // 现有 createArticle 方法（保持不变）
     @Transactional
     public Article createArticle(ArticleReq articleDTO, MultipartFile[] images) throws IOException {
-        // 驗證 userId
-        System.out.println("article:" + articleDTO);
+        // 验证 userId
         User user = userRepository.findById(articleDTO.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("無效的用戶 ID: " + articleDTO.getUserId()));
+                .orElseThrow(() -> new IllegalArgumentException("无效的用户 ID: " + articleDTO.getUserId()));
 
-        // 驗證話題數量
+        // 验证话题数量
         if (articleDTO.getTopics().size() > 3) {
-            throw new IllegalArgumentException("最多只能選擇3個話題");
+            throw new IllegalArgumentException("最多只能选择3个话题");
         }
 
-        // 處理話題
+        // 处理话题
         Set<Topic> topics = new HashSet<>();
         for (String topicName : articleDTO.getTopics()) {
             Topic topic = topicRepository.findByName(topicName)
@@ -87,7 +88,7 @@ public class ArticleService {
             topics.add(topic);
         }
 
-        // 處理塊內容並替換圖片 blob URL
+        // 处理块内容并替换图片 blob URL
         List<Map<String, String>> processedBlocks = new ArrayList<>();
         int imageIndex = 0;
         for (ArticleReq.BlockDTO block : articleDTO.getBlocks()) {
@@ -98,11 +99,11 @@ public class ArticleService {
                 blockMap.put("content", sanitizedContent);
             } else if ("image".equals(block.getType())) {
                 if (imageIndex >= images.length) {
-                    throw new IllegalArgumentException("圖片文件數量不足");
+                    throw new IllegalArgumentException("图片文件数量不足");
                 }
                 MultipartFile image = images[imageIndex++];
                 if (!image.getContentType().startsWith("image/") || image.getSize() > 2 * 1024 * 1024) {
-                    throw new IllegalArgumentException("圖片格式無效或大小超過 2MB");
+                    throw new IllegalArgumentException("图片格式无效或大小超过 2MB");
                 }
                 String fileName = "articles/" + Instant.now().toEpochMilli() + "-" + image.getOriginalFilename();
                 String contentType = s3Util.getContentTypeFromFileName(image.getOriginalFilename());
@@ -123,23 +124,23 @@ public class ArticleService {
             processedBlocks.add(blockMap);
         }
 
-        // 創建 Article 實體
+        // 创建 Article 实体
         Article article = new Article();
         article.setUser(user);
         article.setTitle(articleDTO.getTitle());
         try {
             article.setArticleType(ArticleType.valueOf(articleDTO.getArticleType().toUpperCase()));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("無效的文章類型: " + articleDTO.getArticleType());
+            throw new IllegalArgumentException("无效的文章类型: " + articleDTO.getArticleType());
         }
         article.setContentFromJson(processedBlocks);
         article.setTopics(topics);
         article.setStatus(Article.ArticleStatus.DRAFT);
 
-        // 保存到數據庫
+        // 保存到数据库
         Article savedArticle = articleRepository.save(article);
 
-        // 緩存到 Redis
+        // 缓存到 Redis
         try {
             String json = objectMapper.writeValueAsString(savedArticle);
             redisTemplate.opsForValue().set("article:" + savedArticle.getId(), json, 3600, TimeUnit.SECONDS);
@@ -147,7 +148,7 @@ public class ArticleService {
                 redisTemplate.opsForZSet().add("topics:" + topic.getId() + ":articles", String.valueOf(savedArticle.getId()), System.currentTimeMillis());
             }
         } catch (Exception e) {
-            System.err.println("緩存文章失敗: " + e.getMessage());
+            System.err.println("缓存文章失败: " + e.getMessage());
         }
 
         return savedArticle;
@@ -161,124 +162,93 @@ public class ArticleService {
         return s3Presigner.presignGetObject(r -> r.signatureDuration(Duration.ofHours(1)).getObjectRequest(getObjectRequest)).url().toString();
     }
 
+    // 获取所有文章（保持不变）
     @Transactional(readOnly = true)
     public List<ArticleResp> getAllArticles() throws IOException {
-        // 從數據庫獲取所有文章
         List<Article> articles = articleRepository.findAll();
-
-        // 轉換為 DTO 列表
-        return articles.stream().map(article -> {
-            // 嘗試從 Redis 獲取緩存
-            String cacheKey = "article:" + article.getId();
-            Article cachedArticle = null;
-            try {
-                String cachedJson = redisTemplate.opsForValue().get(cacheKey);
-                if (cachedJson != null) {
-                    cachedArticle = objectMapper.readValue(cachedJson, Article.class);
-                }
-            } catch (Exception e) {
-                System.err.println("從 Redis 讀取文章失敗: " + e.getMessage());
-            }
-
-            // 如果無緩存，使用數據庫數據
-            Article targetArticle = cachedArticle != null ? cachedArticle : article;
-
-            // 獲取用戶信息
-            User user = targetArticle.getUser();
-            if (user == null) {
-                throw new IllegalArgumentException("文章無關聯用戶: " + targetArticle.getId());
-            }
-
-            // 轉換為 DTO
-            ArticleResp dto = new ArticleResp();
-            dto.setId(targetArticle.getId());
-            dto.setTitle(targetArticle.getTitle());
-            dto.setArticleType(targetArticle.getArticleType().name().toLowerCase());
-            dto.setTopics(targetArticle.getTopics().stream()
-                    .map(Topic::getName)
-                    .collect(Collectors.toSet()));
-            try {
-                dto.setBlocks(targetArticle.getContentAsJson().stream()
-                        .map(block -> {
-                            ArticleResp.BlockDTO blockDTO = new ArticleResp.BlockDTO();
-                            blockDTO.setType(block.get("type"));
-                            blockDTO.setContent(block.get("content"));
-                            return blockDTO;
-                        })
-                        .collect(Collectors.toList()));
-            } catch (IOException e) {
-                throw new RuntimeException("解析文章內容失敗: " + targetArticle.getId(), e);
-            }
-            dto.setStatus(targetArticle.getStatus().name());
-            dto.setCreatedAt(targetArticle.getCreatedAt());
-            dto.setNickname(user.getNickname());
-            dto.setAvatar(user.getAvatar());
-            dto.setUserId(user.getId());
-
-            // 如果 Redis 無緩存，更新緩存
-            if (cachedArticle == null) {
-                try {
-                    String json = objectMapper.writeValueAsString(targetArticle);
-                    redisTemplate.opsForValue().set(cacheKey, json, 3600, TimeUnit.SECONDS);
-                } catch (Exception e) {
-                    System.err.println("緩存文章失敗: " + e.getMessage());
-                }
-            }
-
-            return dto;
-        }).collect(Collectors.toList());
+        return articles.stream().map(this::convertToResp).collect(Collectors.toList());
     }
 
+    // 获取待审核文章
+    @Transactional(readOnly = true)
+    public List<ArticleResp> getPendingArticles() throws IOException {
+        List<Article> articles = articleRepository.findByStatus(Article.ArticleStatus.DRAFT);
+        return articles.stream().map(this::convertToResp).collect(Collectors.toList());
+    }
+
+    // 获取单篇文章
     @Transactional(readOnly = true)
     public List<ArticleResp> getArticlesByArticleId(Long articleId) throws IOException {
-        // 验证 articleId 是否有效
         if (articleId == null || articleId <= 0) {
             throw new IllegalArgumentException("无效的文章 ID: " + articleId);
         }
 
-        // 尝试从 Redis 获取缓存
         String cacheKey = "article:" + articleId;
-        Article cachedArticle = null;
+        Article article;
         try {
             String cachedJson = redisTemplate.opsForValue().get(cacheKey);
             if (cachedJson != null) {
-                cachedArticle = objectMapper.readValue(cachedJson, Article.class);
+                article = objectMapper.readValue(cachedJson, Article.class);
+            } else {
+                article = articleRepository.findById(articleId)
+                        .orElseThrow(() -> new IllegalArgumentException("文章不存在: " + articleId));
+                String json = objectMapper.writeValueAsString(article);
+                redisTemplate.opsForValue().set(cacheKey, json, 3600, TimeUnit.SECONDS);
             }
         } catch (Exception e) {
             System.err.println("从 Redis 读取文章失败: " + e.getMessage());
-        }
-
-        // 如果缓存中没有，查询数据库
-        Article article;
-        if (cachedArticle != null) {
-            article = cachedArticle;
-        } else {
             article = articleRepository.findById(articleId)
                     .orElseThrow(() -> new IllegalArgumentException("文章不存在: " + articleId));
-            // 缓存到 Redis
+        }
+
+        return Collections.singletonList(convertToResp(article));
+    }
+
+    // 更新文章状态
+    @Transactional
+    public void updateArticleStatus(Long articleId, String status) {
+        if (articleId == null || articleId <= 0) {
+            throw new IllegalArgumentException("无效的文章 ID: " + articleId);
+        }
+//        if (adminId == null || adminId <= 0) {
+//            throw new IllegalArgumentException("无效的管理员 ID: " + adminId);
+//        }
+
+        // 验证管理员
+//        userRepository.findById(adminId)
+//                .orElseThrow(() -> new IllegalArgumentException("管理员不存在: " + adminId));
+
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> new IllegalArgumentException("文章不存在: " + articleId));
+
+        try {
+            Article.ArticleStatus articleStatus = Article.ArticleStatus.valueOf(status.toUpperCase());
+            article.setStatus(articleStatus);
+            article.setUpdatedAt(LocalDateTime.now());
+            articleRepository.save(article);
+
+            // 更新 Redis 缓存
             try {
                 String json = objectMapper.writeValueAsString(article);
-                redisTemplate.opsForValue().set(cacheKey, json, 3600, TimeUnit.SECONDS);
+                redisTemplate.opsForValue().set("article:" + articleId, json, 3600, TimeUnit.SECONDS);
             } catch (Exception e) {
                 System.err.println("缓存文章失败: " + e.getMessage());
             }
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("无效的状态: " + status);
         }
+    }
 
-        // 验证用户信息
-        User user = article.getUser();
-        if (user == null) {
-            throw new IllegalArgumentException("文章无关联用户: " + article.getId());
-        }
-
-        // 转换为 ArticleResp DTO
-        ArticleResp dto = new ArticleResp();
-        dto.setId(article.getId());
-        dto.setTitle(article.getTitle());
-        dto.setArticleType(article.getArticleType().name().toLowerCase());
-        dto.setTopics(article.getTopics().stream()
-                .map(Topic::getName)
-                .collect(Collectors.toSet()));
+    // 转换为 ArticleResp DTO
+    private ArticleResp convertToResp(Article article) {
         try {
+            ArticleResp dto = new ArticleResp();
+            dto.setId(article.getId());
+            dto.setTitle(article.getTitle());
+            dto.setArticleType(article.getArticleType().name().toLowerCase());
+            dto.setTopics(article.getTopics().stream()
+                    .map(Topic::getName)
+                    .collect(Collectors.toSet()));
             dto.setBlocks(article.getContentAsJson().stream()
                     .map(block -> {
                         ArticleResp.BlockDTO blockDTO = new ArticleResp.BlockDTO();
@@ -287,16 +257,28 @@ public class ArticleService {
                         return blockDTO;
                     })
                     .collect(Collectors.toList()));
+            dto.setStatus(article.getStatus().name());
+            dto.setCreatedAt(article.getCreatedAt());
+            User user = article.getUser();
+            if (user != null) {
+                dto.setNickname(user.getNickname());
+                dto.setAvatar(user.getAvatar());
+                dto.setUserId(user.getId());
+            }
+            return dto;
         } catch (IOException e) {
             throw new RuntimeException("解析文章内容失败: " + article.getId(), e);
         }
-        dto.setStatus(article.getStatus().name());
-        dto.setCreatedAt(article.getCreatedAt());
-        dto.setNickname(user.getNickname());
-        dto.setAvatar(user.getAvatar());
-        dto.setUserId(user.getId());
+    }
 
-        // 返回单篇文章的列表
-        return Collections.singletonList(dto);
+    @Transactional(readOnly = true)
+    public List<ArticleResp> getApprovedArticles() throws IOException {
+        List<Article> articles = articleRepository.findByStatus(Article.ArticleStatus.APPROVED);
+        return articles.stream().map(this::convertToResp).collect(Collectors.toList());
+    }
+
+    public List<ArticleResp> getRejectedArticles() {
+        List<Article> articles = articleRepository.findByStatus(Article.ArticleStatus.REJECTED);
+        return articles.stream().map(this::convertToResp).collect(Collectors.toList());
     }
 }

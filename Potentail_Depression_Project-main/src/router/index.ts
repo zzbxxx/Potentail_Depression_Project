@@ -6,6 +6,7 @@ import PersonalCenter from '../views/PersonalCenter.vue'
 import NotFound from '../views/MessageCode/NotFound404.vue'
 import Editror from '../views/Editor.vue'
 import DetailPage from '../views/DetailPage.vue'
+import AdminControlPage from '../views/AdminControlPage.vue'
 // @ts-ignore
 import { useAudioStore } from '../stores/audio'
 
@@ -38,6 +39,11 @@ const routes = [
         name: 'PersonalCenter',
         component: PersonalCenter,
         meta: { requiresAuth: true }
+    },
+    {
+        path: '/admin-control',
+        name: 'AdminControlPage',
+        component: () => AdminControlPage,
     },
     {
         path: '/detail/:id',
