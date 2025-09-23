@@ -29,7 +29,7 @@ public class UserMessageController {
         resp.setNickname(user.getNickname());
         resp.setAvatar(user.getAvatar());
         resp.setEmail(user.getEmail());
-
+        resp.setId(userId);
         // 3. 返回
         return ResponseEntity.ok(resp);
     }

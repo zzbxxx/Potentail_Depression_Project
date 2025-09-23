@@ -1,5 +1,8 @@
 package com.example.depressive.login.entity;
 
+import com.example.depressive.notification.entity.Notification;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.Getter;
@@ -9,22 +12,22 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
-// User.java
 @Entity
 @Table(name = "users")
 @Getter
 @Setter
 @NoArgsConstructor
 public class User implements UserDetails {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true) // 移除 nullable = false，允许游客用户名为null
+    @Column(unique = true)
     private String username;
 
     @Column(unique = true)
@@ -34,7 +37,7 @@ public class User implements UserDetails {
     private String passwordHash;
 
     @Column(name = "is_guest", nullable = false)
-    private Boolean isGuest = true; // 添加是否为游客字段
+    private Boolean isGuest = true;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
@@ -45,11 +48,16 @@ public class User implements UserDetails {
     @Column(name = "nickname")
     private String nickname;
 
-    @Column(name = "email") // 新增 email 字段，可为空
+    @Column(name = "email")
     private String email;
 
-    @Column(name = "avatar") // 新增 avatar 字段，可为空
+    @Column(name = "avatar")
     private String avatar;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @JsonIgnore
+    private List<Notification> notifications = new ArrayList<>();
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return Collections.emptyList();
@@ -57,12 +65,12 @@ public class User implements UserDetails {
 
     @Override
     public String getPassword() {
-        return passwordHash != null ? passwordHash : ""; // 处理null情况
+        return passwordHash != null ? passwordHash : "";
     }
 
     @Override
     public String getUsername() {
-        return username != null ? username : "guest_" + id; // 处理null情况
+        return username != null ? username : "guest_" + id;
     }
 
     @Override

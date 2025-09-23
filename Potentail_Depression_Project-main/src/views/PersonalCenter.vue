@@ -21,6 +21,19 @@
             <el-icon><User /></el-icon>
             <span>信息设置</span>
           </el-menu-item>
+          <el-sub-menu index="notifications">
+            <template #title>
+              <el-icon><Bell /></el-icon>
+              <span>通知</span>
+              <el-badge v-if="unreadCount > 0" :value="unreadCount" class="notification-badge" />
+            </template>
+            <el-menu-item index="notifications-unread" @click="switchTab('notifications-unread')">
+              未读通知
+            </el-menu-item>
+            <el-menu-item index="notifications-read" @click="switchTab('notifications-read')">
+              已读通知
+            </el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="email" @click="switchTab('email')">
             <el-icon><Message /></el-icon>
             <span>邮箱管理</span>
@@ -36,10 +49,6 @@
           <el-menu-item index="feedback" @click="switchTab('feedback')">
             <el-icon><ChatDotSquare /></el-icon>
             <span>建议与反馈</span>
-          </el-menu-item>
-          <el-menu-item index="notifications" @click="switchTab('notifications')">
-            <el-icon><Bell /></el-icon>
-            <span>通知</span>
           </el-menu-item>
         </el-menu>
       </el-aside>
@@ -51,6 +60,19 @@
             <el-icon><User /></el-icon>
             <span>信息设置</span>
           </el-menu-item>
+          <el-sub-menu index="notifications">
+            <template #title>
+              <el-icon><Bell /></el-icon>
+              <span>通知</span>
+              <el-badge v-if="unreadCount > 0" :value="unreadCount" class="notification-badge" />
+            </template>
+            <el-menu-item index="notifications-unread" @click="switchTab('notifications-unread')">
+              未读通知
+            </el-menu-item>
+            <el-menu-item index="notifications-read" @click="switchTab('notifications-read')">
+              已读通知
+            </el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="email" @click="switchTab('email')">
             <el-icon><Message /></el-icon>
             <span>邮箱管理</span>
@@ -67,10 +89,6 @@
             <el-icon><ChatDotSquare /></el-icon>
             <span>建议与反馈</span>
           </el-menu-item>
-          <el-menu-item index="notifications" @click="switchTab('notifications')">
-            <el-icon><Bell /></el-icon>
-            <span>通知</span>
-          </el-menu-item>
         </el-menu>
       </el-drawer>
 
@@ -81,20 +99,14 @@
           <transition name="fade">
             <div v-if="activeTab === 'profile'">
               <h3>信息设置</h3>
-
-              <!-- 数据没回来前先骨架 -->
               <el-skeleton :rows="3" animated v-if="!user" />
-
-              <!-- 数据回来后正常渲染 -->
               <el-form v-else :model="user" :rules="formRules" ref="profileForm" label-width="120px">
                 <el-form-item label="用户名" prop="nickname">
                   <el-input v-model="user.nickname" placeholder="请输入用户名" />
                 </el-form-item>
-
                 <el-form-item label="绑定邮箱" prop="email">
                   <el-input v-model="user.email" placeholder="请输入邮箱" />
                 </el-form-item>
-
                 <el-form-item label="头像">
                   <el-upload
                     action="#"
@@ -106,8 +118,6 @@
                   >
                     <el-button type="primary" :loading="uploading">上传头像</el-button>
                   </el-upload>
-
-                  <!-- 头像预览 -->
                   <el-image
                     v-if="previewAvatar || user.avatar"
                     :src="previewAvatar || user.avatar"
@@ -116,7 +126,6 @@
                     :preview-src-list="[previewAvatar || user.avatar]"
                   />
                 </el-form-item>
-
                 <el-form-item>
                   <el-button type="primary" @click="saveProfile">保存</el-button>
                 </el-form-item>
@@ -177,10 +186,18 @@
             </div>
           </transition>
           <transition name="fade">
-            <div v-if="activeTab === 'notifications'">
-              <h3>通知</h3>
-              <el-empty description="暂无通知，保持平静。"></el-empty>
-            </div>
+            <NotificationPanel 
+              v-if="activeTab === 'notifications-unread' && user" 
+              :user-id="user.id" 
+              filter="unread" 
+            />
+          </transition>
+          <transition name="fade">
+            <NotificationPanel 
+              v-if="activeTab === 'notifications-read' && user" 
+              :user-id="user.id" 
+              filter="read" 
+            />
           </transition>
         </el-card>
       </el-main>
@@ -189,24 +206,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted ,onUnmounted} from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { User, Message, Star, Bell, Menu, ChatDotSquare, Upload } from '@element-plus/icons-vue';
 import EmailManagement from '/src/components/PersonalCenter/EmailManagement.vue';
+import NotificationPanel from '/src/components/PersonalCenter/NotificationPanel.vue';
 import { useRouter } from 'vue-router';
 import PersonalMessageApi from '/src/api/PersonalMessageApi';
+import { useNotificationStore } from '/src/stores/notification';
+import NotificationService from '/src/api/notificationApi';
 
 const router = useRouter();
 const isMobile = ref(window.innerWidth <= 768);
 const drawerVisible = ref(false);
 const activeMenu = ref('profile');
 const activeTab = ref('profile');
-const previewAvatar = ref(''); 
+const previewAvatar = ref('');
 const user = ref(null);
 const favorites = ref([
   { id: 1, title: '收藏项1', image: 'https://via.placeholder.com/150' },
   { id: 2, title: '收藏项2', image: 'https://via.placeholder.com/150' },
 ]);
+const notificationStore = useNotificationStore();
 
 const formRules = ref({
   nickname: [
@@ -216,17 +237,13 @@ const formRules = ref({
   email: [
     {
       validator: (rule, value, callback) => {
-        if (!value) {
-          callback(); 
-        } else if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) {
-          callback();
-        } else {
-          callback(new Error('请输入有效的邮箱地址'));
-        }
+        if (!value) callback();
+        else if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) callback();
+        else callback(new Error('请输入有效的邮箱地址'));
       },
       trigger: ['blur', 'change']
     }
-  ]
+  ],
 });
 const feedbackContent = ref('');
 const avatarFile = ref(null);
@@ -234,28 +251,49 @@ const emailFile = ref(null);
 const uploading = ref(false);
 const emailUploading = ref(false);
 
+const unreadCount = computed(() => notificationStore.unreadCount);
+
 const fetchUserInfo = async () => {
   try {
-    const data = await PersonalMessageApi.getPersonalInfo()
-    user.value = data 
+    const data = await PersonalMessageApi.getPersonalInfo();
+    user.value = data;
+    // 初始化未读通知数量
+    if (data?.id) {
+      try {
+        const response = await NotificationService.getUnreadNotifications(data.id);
+        if (Array.isArray(response)) {
+          notificationStore.updateUnreadCount(response.length);
+        } else {
+          throw new Error('未读通知数据格式错误');
+        }
+      } catch (error) {
+        console.error('获取未读通知失败:', error);
+        ElMessage.error(`获取未读通知失败: ${error.message}`);
+      }
+    } else {
+      console.error('用户信息中缺少 user.id');
+      ElMessage.error('无法获取用户ID');
+    }
   } catch (e) {
-    console.error(e)
-    ElMessage.error('获取用户信息失败')
+    console.error('获取用户信息失败:', e);
+    ElMessage.error('获取用户信息失败');
   }
-}
+};
 
 onMounted(() => {
   window.addEventListener('resize', () => {
     isMobile.value = window.innerWidth <= 768;
   });
-
   fetchUserInfo();
 });
 
-const switchTab = (tab) => {
+const switchTab = (tab, markAsRead = false) => {
   activeTab.value = tab;
   activeMenu.value = tab;
   drawerVisible.value = false;
+  if (markAsRead && tab === 'notifications' && user.value) {
+    notificationStore.markAllAsRead();
+  }
 };
 
 const beforeUpload = (file) => {
@@ -269,16 +307,13 @@ const beforeUpload = (file) => {
     ElMessage.error('图片大小不能超过 2MB');
     return false;
   }
-  return false;  // 修改：返回 false，阻止任何默認上傳行為（因為我們手動處理）
+  return false;
 };
 
-// 新增：處理文件選擇事件，生成本地預覽
 const handleAvatarChange = (uploadFile) => {
-  if (previewAvatar.value) {
-    URL.revokeObjectURL(previewAvatar.value); 
-  }
-  avatarFile.value = uploadFile.raw; 
-  previewAvatar.value = URL.createObjectURL(avatarFile.value);  // 生成本地 URL 用於預覽
+  if (previewAvatar.value) URL.revokeObjectURL(previewAvatar.value);
+  avatarFile.value = uploadFile.raw;
+  previewAvatar.value = URL.createObjectURL(avatarFile.value);
 };
 
 const handleUpload = async () => {
@@ -286,34 +321,22 @@ const handleUpload = async () => {
   uploading.value = true;
   try {
     const { url, publicUrl } = await PersonalMessageApi.getPicturePresignedUrl(avatarFile.value.name, avatarFile.value.type);
-    console.log('Pre-signed Upload URL:', url);
-    console.log('Access URL:', publicUrl);
-
     const uploadSuccess = await PersonalMessageApi.uploadFile(url, avatarFile.value);
-    if (uploadSuccess) {
-      user.value.avatar = publicUrl; 
-    } else {
-      throw new Error('上传到 Backblaze B2 失败');
-    }
+    if (uploadSuccess) user.value.avatar = publicUrl;
+    else throw new Error('上传到 Backblaze B2 失败');
   } catch (error) {
     ElMessage.error(`上传失败：${error.message || '请稍后重试，或联系支持团队'}`);
     console.error('Upload error:', error);
-    throw error; 
   } finally {
     uploading.value = false;
   }
 };
 
-// 修改：saveProfile 先上傳（如果有文件），再保存到數據庫
 const saveProfile = async () => {
   try {
-    if (avatarFile.value) {
-      await handleUpload();  // 如果有新文件，先上傳
-    }
-    
-    await PersonalMessageApi.putPersonalInfo(user.value);  // 上傳成功後保存到數據庫
+    if (avatarFile.value) await handleUpload();
+    await PersonalMessageApi.putPersonalInfo(user.value);
     ElMessage.success('保存成功');
-    // 清理預覽和文件
     if (previewAvatar.value) {
       URL.revokeObjectURL(previewAvatar.value);
       previewAvatar.value = '';
@@ -325,25 +348,32 @@ const saveProfile = async () => {
 };
 
 onUnmounted(() => {
-  if (previewAvatar.value) {
-    URL.revokeObjectURL(previewAvatar.value);
-  }
+  if (previewAvatar.value) URL.revokeObjectURL(previewAvatar.value);
 });
+
+const beforeEmailUpload = (file) => {
+  const isCsvOrTxt = file.type === 'text/csv' || file.type === 'text/plain';
+  const isLt5M = file.size / 1024 / 1024 < 5;
+  if (!isCsvOrTxt) {
+    ElMessage.error('请上传 CSV 或 TXT 文件');
+    return false;
+  }
+  if (!isLt5M) {
+    ElMessage.error('文件大小不能超过 5MB');
+    return false;
+  }
+  emailFile.value = file;
+  return false;
+};
 
 const handleEmailUpload = async () => {
   if (!emailFile.value) return;
   emailUploading.value = true;
   try {
     const { url, publicUrl } = await PersonalMessageApi.getEmailPresignedUrl(emailFile.value.name, emailFile.value.type);
-    console.log('Pre-signed Email Upload URL:', url);
-    console.log('Access URL:', publicUrl);
-
     const uploadSuccess = await PersonalMessageApi.uploadFile(url, emailFile.value);
-    if (uploadSuccess) {
-      ElMessage.success('邮箱文件上传成功！');
-    } else {
-      throw new Error('上传邮箱文件到 Backblaze B2 失败');
-    }
+    if (uploadSuccess) ElMessage.success('邮箱文件上传成功！');
+    else throw new Error('上传邮箱文件到 Backblaze B2 失败');
   } catch (error) {
     ElMessage.error(`上传失败：${error.message || '请稍后重试，或联系支持团队'}`);
     console.error('Email Upload error:', error);
@@ -374,82 +404,38 @@ const refreshDownloadUrl = async (fileKey) => {
 };
 
 setInterval(() => {
-  if (user.value.avatar && user.value.avatar.includes('X-Amz-Expires')) {
+  if (user.value?.avatar && user.value.avatar.includes('X-Amz-Expires')) {
     const fileKey = user.value.avatar.split('/avatars/')[1].split('?')[0];
     refreshDownloadUrl(fileKey);
   }
 }, 3600 * 1000);
 
-
-const logout = () => {
-  router.push('/main');
-};
+const logout = () => router.push('/main');
 
 const submitFeedback = () => {
   if (feedbackContent.value.trim()) {
     ElMessage.success('反馈提交成功，感谢您的建议！');
     feedbackContent.value = '';
-  } else {
-    ElMessage.warning('请填写反馈内容');
-  }
+  } else ElMessage.warning('请填写反馈内容');
 };
 </script>
 
 <style scoped>
-.personal-center {
-  height: 100vh;
-  background-color: #f0f4f8;
-  color: #606266;
-}
-.header {
-  background-color: #ffffff;
-  padding: 20px;
-  border-bottom: 1px solid #e0e0e0;
-}
-.header h2 {
-  margin: 0;
-  font-size: 24px;
-  color: #409EFF;
-}
-.sidebar {
-  background-color: #f0f4f8;
-  border-right: 1px solid #e0e0e0;
-}
-.main-content {
-  padding: 20px;
-}
-.content-card {
-  background-color: #ffffff;
-  border-radius: 8px;
-}
-.mobile-menu-btn {
-  margin-bottom: 20px;
-}
-.image {
-  width: 100%;
-  height: 150px;
-  object-fit: cover;
-}
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s ease;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
-.text-right {
-  text-align: right;
-}
-.encourage {
-  font-size: 14px;
-  color: #909399;
-  margin-bottom: 20px;
-}
+.personal-center { height: 100vh; background-color: #f0f4f8; color: #606266; }
+.header { background-color: #ffffff; padding: 20px; border-bottom: 1px solid #e0e0e0; }
+.header h2 { margin: 0; font-size: 24px; color: #409EFF; }
+.sidebar { background-color: #f0f4f8; border-right: 1px solid #e0e0e0; }
+.main-content { padding: 20px; }
+.content-card { background-color: #ffffff; border-radius: 8px; }
+.mobile-menu-btn { margin-bottom: 20px; }
+.image { width: 100%; height: 150px; object-fit: cover; }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+.text-right { text-align: right; }
+.encourage { font-size: 14px; color: #909399; margin-bottom: 20px; }
+.notification-badge { margin-left: 10px; margin-bottom: 2rem;}
 @media (max-width: 768px) {
-  .header h2 {
-    font-size: 20px;
-  }
-  .main-content {
-    padding: 10px;
-  }
+  .header h2 { font-size: 20px; }
+  .main-content { padding: 10px; }
 }
 </style>

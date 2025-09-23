@@ -31,6 +31,7 @@ public class SecurityConfig {
                         .requestMatchers("api/userMessage/**").permitAll()
                         .requestMatchers("/api/articles/**").permitAll()
                         .requestMatchers("/api/reply/**").permitAll()
+                        .requestMatchers("/api/notifications/**").permitAll()
                         .anyRequest().authenticated()
 
                 )

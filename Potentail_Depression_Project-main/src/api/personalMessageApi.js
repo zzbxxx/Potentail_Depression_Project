@@ -3,6 +3,7 @@ export default class PersonalMessageApi {
     static EMAIL_BASE_URL = 'http://localhost:8080/api/email';
 
     static async getPersonalInfo() {
+
         const userId = localStorage.getItem('userId') || localStorage.getItem('user_id');
         if (!userId) throw new Error('缺少 userId');
 

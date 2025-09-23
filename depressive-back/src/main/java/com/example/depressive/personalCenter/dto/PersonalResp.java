@@ -10,4 +10,6 @@ public class PersonalResp {
     private String avatar;
 
     private String email;
+
+    private long id;
 }

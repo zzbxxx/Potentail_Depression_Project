@@ -1,4 +1,3 @@
-<!-- ReplySection.vue -->
 <template>
   <div class="reply-section flat-style">
     <h3 class="reply-title">私密留言板</h3>
@@ -44,6 +43,7 @@
 import { ref, onMounted, provide } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import ArticleService from '/src/api/articleApi';
+import NotificationService from '/src/api/notificationApi';
 import ReplyItem from './ReplyItem.vue';
 
 const props = defineProps({
@@ -126,11 +126,21 @@ const submitReply = async () => {
       articleId: props.articleId,
       content: newReply.value,
     });
+    // 发送通知给作者
+    if (userId != props.authorId) { // 避免自己给自己发通知
+      await NotificationService.createNotification({
+        userId: props.authorId,
+        title: '新留言',
+        content: `用户在您的文章（ID: ${props.articleId}）下发表了新留言`,
+        notificationType: 'COMMENT'
+      });
+    }
     fetchReplies();
     newReply.value = '';
     ElMessage.success('留言发送成功！');
-  } catch {
+  } catch (e) {
     ElMessage.error('发送失败，请稍后重试');
+    console.error('提交留言失败:', e);
   } finally {
     submitting.value = false;
   }
@@ -171,12 +181,22 @@ const submitNestedReply = async (parentId) => {
       content: nestedReplyContent.value[parentId],
       parentId,
     });
+    // 发送通知给作者
+    if (userId != props.authorId) { // 避免自己给自己发通知
+      await NotificationService.createNotification({
+        userId: props.authorId,
+        title: '新回复',
+        content: `用户在您的文章（ID: ${props.articleId}）下回复了您的留言`,
+        notificationType: 'COMMENT'
+      });
+    }
     fetchReplies();
     nestedReplyContent.value[parentId] = '';
     showReplyForm.value[parentId] = false;
     ElMessage.success('回复成功！');
-  } catch {
+  } catch (e) {
     ElMessage.error('回复失败，请稍后重试');
+    console.error('提交回复失败:', e);
   } finally {
     submittingNested.value[parentId] = false;
   }

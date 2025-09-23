@@ -90,6 +90,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import ArticleService from '/src/api/articleApi.js'
 import ArticleDisplay from '/src/components/article/ArticleDisplay.vue'
+import NotificationService from '/src/api/notificationApi';
 
 const props = defineProps({
   status: {
@@ -177,7 +178,20 @@ const passArticle = async (articleId) => {
   try {
     await ArticleService.updateArticleStatus(articleId, 'APPROVED')
     ElMessage.success('文章已通过')
-    getInfo() 
+
+    // 发送通知给用户
+    const userId = articles.value.find(a => a.id === articleId)?.userId
+    if (userId) {
+      const notificationDTO = {
+        userId: userId,
+        title: '文章审核通过',
+        content: `您的文章（ID: ${articleId}）已通过审核，感谢您的贡献！`,
+        notificationType: 'SYSTEM_AUDIT'
+      }
+      await NotificationService.createNotification(notificationDTO)
+    }
+
+    getInfo()
   } catch (e) {
     ElMessage.error('通过文章失败')
     console.error(e)
@@ -189,6 +203,19 @@ const rejectArticle = async (articleId) => {
   try {
     await ArticleService.updateArticleStatus(articleId, 'REJECTED')
     ElMessage.success('文章已拒绝')
+
+    // 发送通知给用户
+    const userId = articles.value.find(a => a.id === articleId)?.userId
+    if (userId) {
+      const notificationDTO = {
+        userId: userId,
+        title: '文章审核未通过',
+        content: `您的文章（ID: ${articleId}）未通过审核，请查看原因并修改后重新提交。`,
+        notificationType: 'SYSTEM_AUDIT'
+      }
+      await NotificationService.createNotification(notificationDTO)
+    }
+
     getInfo()
   } catch (e) {
     ElMessage.error('拒绝文章失败')
@@ -206,7 +233,6 @@ watch(() => props.status, () => {
 </script>
 
 <style scoped>
-/* 保持原有样式不变 */
 .article-audit {
   padding: 1rem;
 }
@@ -250,7 +276,6 @@ watch(() => props.status, () => {
   border-radius: 8px;
 }
 
-/* 暗色模式适配 */
 @media (prefers-color-scheme: dark) {
   .page-title {
     color: #E0E0E0;
