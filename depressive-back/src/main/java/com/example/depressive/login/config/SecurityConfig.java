@@ -32,6 +32,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/articles/**").permitAll()
                         .requestMatchers("/api/reply/**").permitAll()
                         .requestMatchers("/api/notifications/**").permitAll()
+                        .requestMatchers("/api/follow/**").permitAll()
+                        .requestMatchers("/api/topics/**").permitAll()
+                        .requestMatchers("/api/favorites/**").permitAll()
                         .anyRequest().authenticated()
 
                 )
