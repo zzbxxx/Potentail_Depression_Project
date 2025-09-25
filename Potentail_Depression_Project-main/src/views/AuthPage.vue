@@ -74,7 +74,6 @@ const loginForm = ref({ username: '', password: '' })
 const registerForm = ref({ username: '', phone: '', password: '' })
 const code = ref('')
 
-
 async function touristLogin() {
   localStorage.removeItem('auth_token')
   localStorage.removeItem('userId')

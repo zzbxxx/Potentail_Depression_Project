@@ -8,5 +8,5 @@ public class UserCardsLog {
     private Long id;
     private Long userId;
     private java.time.LocalDate date;
-    private Short contentId;
+    private short contentId;
 }

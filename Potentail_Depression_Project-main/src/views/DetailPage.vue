@@ -46,106 +46,100 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive, onBeforeUnmount } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import ArticleService from '/src/api/articleApi'
-import ArticleDisplay from '/src/components/article/ArticleDisplay.vue'
-import AuthorInfo from '/src/components/article/AuthorInfo.vue'
-import ReplySection from '/src/components/article/ReplySection.vue'
-import ActionBar from '/src/components/article/ActionBar.vue'
-import { ElMessage, ElSkeleton } from 'element-plus'
+import { ref, onMounted, reactive, onBeforeUnmount } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import ArticleService from '/src/api/articleApi';
+import ArticleDisplay from '/src/components/article/ArticleDisplay.vue';
+import AuthorInfo from '/src/components/article/AuthorInfo.vue';
+import ReplySection from '/src/components/article/ReplySection.vue';
+import ActionBar from '/src/components/article/ActionBar.vue';
+import { ElMessage } from 'element-plus';
+const router = useRouter();
+const route = useRoute();
+const articleId = route.params.id;
+const article = ref(null);
+const menuVisible = reactive({});
+const isLoading = ref(true);
 
-// 路由和参数
-const router = useRouter()
-const route = useRoute()
-const articleId = route.params.id
-const article = ref(null)
-const menuVisible = reactive({})
-const isLoading = ref(true)
 
 // 获取文章数据
 const fetchArticle = async () => {
   if (!articleId) {
-    ElMessage.error('无效的文章 ID')
-    isLoading.value = false
-    return
+    ElMessage.error('无效的文章 ID');
+    isLoading.value = false;
+    return;
   }
   try {
-    const response = await ArticleService.getArticleData(articleId)
-    article.value = Array.isArray(response) ? response[0] : response
+    const response = await ArticleService.getArticleData(articleId);
+    article.value = Array.isArray(response) ? response[0] : response;
     if (article.value) {
-      article.value.likes = article.value.likes || 0
-      article.value.loves = article.value.loves || 0
-      article.value.liked = article.value.liked || false
+      article.value.likes = article.value.likes || 0;
+      article.value.loves = article.value.loves || 0;
+      article.value.liked = article.value.liked || false;
     }
   } catch (error) {
-    console.error('获取文章失败:', error)
-    ElMessage.error('获取文章失败')
+    console.error('获取文章失败:', error);
+    ElMessage.error('获取文章失败');
   } finally {
-    isLoading.value = false
+    isLoading.value = false;
   }
-}
+};
 
-// 返回主页面
 const goBack = () => {
-  router.push('/main')
-}
+  router.go(-1);
+};
 
 // ActionBar 事件处理
 const like = (article) => {
   if (!article.liked) {
-    article.likes++
-    article.liked = true
+    article.likes++;
+    article.liked = true;
   } else {
-    article.likes--
-    article.liked = false
+    article.likes--;
+    article.liked = false;
   }
-}
-
-const favorite = (article) => {
-  ElMessage.success(`收藏文章 ${article.id}`)
-}
+};
 
 const share = (article) => {
-  ElMessage.success(`分享文章 ${article.id}`)
-}
+  ElMessage.success(`分享文章 ${article.id}`);
+};
 
 const love = (article) => {
-  article.loves++
-  ElMessage.success('已喜欢~')
-}
+  article.loves++;
+  ElMessage.success('已喜欢~');
+};
 
 const report = (article) => {
-  ElMessage.warning(`已举报文章 ${article.id}`)
-  menuVisible[article.id] = false
-}
+  ElMessage.warning(`已举报文章 ${article.id}`);
+  menuVisible[article.id] = false;
+};
 
 const dislikeArticle = (article) => {
-  ElMessage.info(`将减少类似文章 ${article.id} 的推荐`)
-  menuVisible[article.id] = false
-}
+  ElMessage.info(`将减少类似文章 ${article.id} 的推荐`);
+  menuVisible[article.id] = false;
+};
 
 const dislikeAuthor = (article) => {
-  ElMessage.info(`将减少作者 ${article.nickname || '匿名'} 的内容`)
-  menuVisible[article.id] = false
-}
+  ElMessage.info(`将减少作者 ${article.nickname || '匿名'} 的内容`);
+  menuVisible[article.id] = false;
+};
 
 const toggleMenu = (article, val) => {
-  const id = article.id
-  Object.keys(menuVisible).forEach(k => (menuVisible[k] = false))
-  menuVisible[id] = val
-}
+  const id = article.id;
+  Object.keys(menuVisible).forEach(k => (menuVisible[k] = false));
+  menuVisible[id] = val;
+};
 
 const closeAllMenu = () => {
-  Object.keys(menuVisible).forEach(k => (menuVisible[k] = false))
-}
+  Object.keys(menuVisible).forEach(k => (menuVisible[k] = false));
+};
 
 // 页面加载和卸载
 onMounted(() => {
-  document.addEventListener('click', closeAllMenu)
-  fetchArticle()
-})
-onBeforeUnmount(() => document.removeEventListener('click', closeAllMenu))
+  document.addEventListener('click', closeAllMenu);
+  fetchArticle();
+});
+onBeforeUnmount(() => document.removeEventListener('click', closeAllMenu));
 </script>
 
 <style scoped>

@@ -1,14 +1,12 @@
 package com.example.depressive.mood.service;
 
 import com.example.depressive.mood.dto.CardResp;
-import com.example.depressive.mood.dto.MoodReq;
 import com.example.depressive.mood.entity.CardsContent;
 import com.example.depressive.mood.entity.UserCardsLog;
 import com.example.depressive.mood.entity.UserMoodLog;
 import com.example.depressive.mood.repository.CardsContentRepository;
 import com.example.depressive.mood.repository.UserCardsLogRepository;
 import com.example.depressive.mood.repository.UserMoodLogRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -76,10 +74,27 @@ public class CardService {
                     BeanUtils.copyProperties(c, r);
                     r.setTags(List.of(c.getTags().replaceAll("[\\[\\]\"]", "").split(",")));
                     r.setDate(l.getDate());
-                    System.out.println("l is"+l.getDate());
+                    System.out.println("l is" + l.getDate());
                     return r;
                 })
                 .toList();
+    }
+
+    public CardResp getCardByCardId(Long userId, Short contentId) {
+        // 查詢卡片數據
+        CardsContent card = cardRepo.findById(contentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "卡片不存在"));
+
+        // 查詢用戶卡片日誌（取最新一條記錄）
+        Optional<UserCardsLog> logOptional = logRepo.findTopByUserIdAndContentIdOrderByDateDesc(userId, contentId);
+
+        // 封裝返回數據
+        CardResp resp = new CardResp();
+        BeanUtils.copyProperties(card, resp);
+        resp.setTags(List.of(card.getTags().replaceAll("[\\[\\]\"]", "").split(",")));
+        resp.setDate(logOptional.map(UserCardsLog::getDate).orElse(null));
+
+        return resp;
     }
 
     private CardsContent recommendCardBasedOnMood(Long userId, List<CardsContent> activeCards) {

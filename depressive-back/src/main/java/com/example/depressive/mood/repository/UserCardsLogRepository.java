@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public interface UserCardsLogRepository extends JpaRepository<UserCardsLog, Long> {
     Optional<UserCardsLog> findByUserIdAndDate(Long userId, LocalDate date);
+    List<UserCardsLog> findByUserIdAndContentId(Long userId, Short contentId);
+    Optional<UserCardsLog> findTopByUserIdAndContentIdOrderByDateDesc(Long userId, Short contentId);
     List<UserCardsLog> findByUserIdOrderByDateDesc(Long userId);
-
-
 }

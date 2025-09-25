@@ -106,9 +106,8 @@ public class FollowService {
     }
 
     public List<ArticleFeedDTO> getFollowingArticles(Long userId) {
-        System.out.println("uid:"+userId);
+
         List<Long> followingIds = getFollowing(userId);
-        System.out.println("fid:"+followingIds);
         return articleRepository.findByUserIdInAndStatus(followingIds, Article.ArticleStatus.PUBLISHED)
                 .stream()
                 .map(article -> {

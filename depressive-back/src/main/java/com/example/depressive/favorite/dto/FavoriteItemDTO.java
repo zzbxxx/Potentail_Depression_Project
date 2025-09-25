@@ -15,4 +15,8 @@ public class FavoriteItemDTO {
     private String category;
     private LocalDateTime createdAt;
     private Object extraInfo;
+
+    private Long authorId;
+    private String authorNickname;
+    private String authorAvatar;
 }

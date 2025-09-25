@@ -7,6 +7,8 @@ import com.example.depressive.favorite.dto.*;
 import com.example.depressive.favorite.entity.Favorite;
 import com.example.depressive.favorite.repository.FavoriteRepository;
 import com.example.depressive.article.entity.Topic;
+import com.example.depressive.mood.entity.CardsContent;
+import com.example.depressive.mood.repository.CardsContentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,9 +26,11 @@ public class FavoriteService {
     private final FavoriteRepository favoriteRepository;
     private final ArticleRepository articleRepository;
     private final TopicRepository topicRepository;
+    private final CardsContentRepository cardsContentRepository;
 
     private static final String TYPE_ARTICLE = "ARTICLE";
     private static final String TYPE_TOPIC = "TOPIC";
+    private static final String TYPE_CARD = "CARD";
 
     @Transactional
     public FavoriteResponse addFavorite(FavoriteRequest request, Long userId) {
@@ -118,6 +122,7 @@ public class FavoriteService {
             Long totalCount = favoriteRepository.countByUserId(userId);
             Long articleCount = favoriteRepository.countByUserIdAndFavoriteableType(userId, TYPE_ARTICLE);
             Long topicCount = favoriteRepository.countByUserIdAndFavoriteableType(userId, TYPE_TOPIC);
+            Long cardCount = favoriteRepository.countByUserIdAndFavoriteableType(userId, TYPE_CARD);
 
             return new FavoriteStatsDTO(totalCount, articleCount, topicCount);
         } catch (Exception e) {
@@ -145,6 +150,7 @@ public class FavoriteService {
         return switch (favoriteableType.toUpperCase()) {
             case TYPE_ARTICLE -> articleRepository.existsById(favoriteableId);
             case TYPE_TOPIC -> topicRepository.existsById(favoriteableId);
+            case TYPE_CARD -> cardsContentRepository.existsById(favoriteableId.shortValue());
             default -> false;
         };
     }
@@ -169,20 +175,32 @@ public class FavoriteService {
         dto.setCategory(favorite.getCategory());
         dto.setCreatedAt(favorite.getCreatedAt());
 
-        // 根据类型设置额外信息
         switch (favorite.getFavoriteableType()) {
             case TYPE_ARTICLE -> {
                 Optional<Article> article = articleRepository.findById(favorite.getFavoriteableId());
                 article.ifPresent(a -> {
                     dto.setTitle(a.getTitle());
-                    // 安全处理JSON内容
                     String content = a.getContent() != null ? a.getContent().toString() : "";
                     dto.setContentPreview(content.substring(0, Math.min(100, content.length())));
+                    if (a.getUser() != null) {
+                        dto.setAuthorNickname(a.getUser().getNickname());
+                        dto.setAuthorAvatar(a.getUser().getAvatar());
+                    }
                 });
             }
             case TYPE_TOPIC -> {
                 Optional<Topic> topic = topicRepository.findById(favorite.getFavoriteableId());
                 topic.ifPresent(t -> dto.setTitle(t.getName()));
+            }
+            case TYPE_CARD -> {
+                Optional<CardsContent> card = cardsContentRepository.findById(favorite.getFavoriteableId().shortValue());
+                card.ifPresent(c -> {
+                    dto.setTitle(c.getQuoteText());
+                    dto.setContentPreview(c.getBookTitle() != null ? c.getBookTitle() : "");
+                    dto.setAuthorNickname(c.getAuthor() != null ? c.getAuthor() : "未知作者");
+                    // 卡片無頭像，設置為空或默認值
+                    dto.setAuthorAvatar(null);
+                });
             }
         }
 

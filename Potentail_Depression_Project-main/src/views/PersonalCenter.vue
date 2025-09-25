@@ -14,7 +14,6 @@
 
     <!-- 主体 -->
     <el-container>
-      <!-- 侧边栏 -->
       <el-aside width="200px" class="sidebar" v-if="!isMobile">
         <el-menu :default-active="activeMenu" background-color="#f0f4f8" text-color="#606266" active-text-color="#409EFF">
           <el-menu-item index="profile" @click="switchTab('profile')">
@@ -34,6 +33,18 @@
               已读通知
             </el-menu-item>
           </el-sub-menu>
+          <el-sub-menu index="favorites">
+            <template #title>
+              <el-icon><Star /></el-icon>
+              <span>收藏</span>
+            </template>
+            <el-menu-item index="favorites-articles" @click="switchTab('favorites-articles')">
+              文章收藏
+            </el-menu-item>
+            <el-menu-item index="favorites-cards" @click="switchTab('favorites-cards')">
+              卡片收藏
+            </el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="email" @click="switchTab('email')">
             <el-icon><Message /></el-icon>
             <span>邮箱管理</span>
@@ -41,10 +52,6 @@
           <el-menu-item index="emailUpload" @click="switchTab('emailUpload')">
             <el-icon><Upload /></el-icon>
             <span>邮箱上传</span>
-          </el-menu-item>
-          <el-menu-item index="favorites" @click="switchTab('favorites')">
-            <el-icon><Star /></el-icon>
-            <span>收藏</span>
           </el-menu-item>
           <el-menu-item index="feedback" @click="switchTab('feedback')">
             <el-icon><ChatDotSquare /></el-icon>
@@ -73,6 +80,18 @@
               已读通知
             </el-menu-item>
           </el-sub-menu>
+          <el-sub-menu index="favorites">
+            <template #title>
+              <el-icon><Star /></el-icon>
+              <span>收藏</span>
+            </template>
+            <el-menu-item index="favorites-articles" @click="switchTab('favorites-articles')">
+              文章收藏
+            </el-menu-item>
+            <el-menu-item index="favorites-cards" @click="switchTab('favorites-cards')">
+              卡片收藏
+            </el-menu-item>
+          </el-sub-menu>
           <el-menu-item index="email" @click="switchTab('email')">
             <el-icon><Message /></el-icon>
             <span>邮箱管理</span>
@@ -80,10 +99,6 @@
           <el-menu-item index="emailUpload" @click="switchTab('emailUpload')">
             <el-icon><Upload /></el-icon>
             <span>邮箱上传</span>
-          </el-menu-item>
-          <el-menu-item index="favorites" @click="switchTab('favorites')">
-            <el-icon><Star /></el-icon>
-            <span>收藏</span>
           </el-menu-item>
           <el-menu-item index="feedback" @click="switchTab('feedback')">
             <el-icon><ChatDotSquare /></el-icon>
@@ -157,19 +172,10 @@
             </div>
           </transition>
           <transition name="fade">
-            <div v-if="activeTab === 'favorites'">
-              <h3>收藏</h3>
-              <el-row :gutter="20">
-                <el-col :span="8" v-for="item in favorites" :key="item.id">
-                  <el-card :body-style="{ padding: '10px' }">
-                    <img :src="item.image" class="image" />
-                    <div style="padding: 14px;">
-                      <span>{{ item.title }}</span>
-                    </div>
-                  </el-card>
-                </el-col>
-              </el-row>
-            </div>
+            <FavoritesPanel 
+              v-if="activeTab === 'favorites-articles' || activeTab === 'favorites-cards'" 
+              :active-tab="activeTab"
+            />
           </transition>
           <transition name="fade">
             <div v-if="activeTab === 'feedback'">
@@ -206,27 +212,25 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { User, Message, Star, Bell, Menu, ChatDotSquare, Upload } from '@element-plus/icons-vue';
 import EmailManagement from '/src/components/PersonalCenter/EmailManagement.vue';
 import NotificationPanel from '/src/components/PersonalCenter/NotificationPanel.vue';
-import { useRouter } from 'vue-router';
+import FavoritesPanel from '/src/components/PersonalCenter/FavoritesPanel.vue';
+import { useRouter, useRoute } from 'vue-router';
 import PersonalMessageApi from '/src/api/PersonalMessageApi';
 import { useNotificationStore } from '/src/stores/notification';
 import NotificationService from '/src/api/notificationApi';
 
 const router = useRouter();
+const route = useRoute();
 const isMobile = ref(window.innerWidth <= 768);
 const drawerVisible = ref(false);
 const activeMenu = ref('profile');
 const activeTab = ref('profile');
 const previewAvatar = ref('');
 const user = ref(null);
-const favorites = ref([
-  { id: 1, title: '收藏项1', image: 'https://via.placeholder.com/150' },
-  { id: 2, title: '收藏项2', image: 'https://via.placeholder.com/150' },
-]);
 const notificationStore = useNotificationStore();
 
 const formRules = ref({
@@ -253,11 +257,43 @@ const emailUploading = ref(false);
 
 const unreadCount = computed(() => notificationStore.unreadCount);
 
+// 有效標籤列表，防止無效標籤
+const validTabs = [
+  'profile',
+  'notifications-unread',
+  'notifications-read',
+  'favorites-articles',
+  'favorites-cards',
+  'email',
+  'emailUpload',
+  'feedback'
+];
+
+// 初始化標籤狀態
+const initTabState = () => {
+  // 從路由參數獲取 tab，如果不存在則從 localStorage 獲取，否則預設為 'profile'
+  const tabFromQuery = route.query.tab;
+  const tabFromStorage = localStorage.getItem('personalCenterActiveTab');
+  const defaultTab = 'profile';
+
+  if (tabFromQuery && validTabs.includes(tabFromQuery)) {
+    activeTab.value = tabFromQuery;
+    activeMenu.value = tabFromQuery;
+    localStorage.setItem('personalCenterActiveTab', tabFromQuery);
+  } else if (tabFromStorage && validTabs.includes(tabFromStorage)) {
+    activeTab.value = tabFromStorage;
+    activeMenu.value = tabFromStorage;
+  } else {
+    activeTab.value = defaultTab;
+    activeMenu.value = defaultTab;
+    localStorage.setItem('personalCenterActiveTab', defaultTab);
+  }
+};
+
 const fetchUserInfo = async () => {
   try {
     const data = await PersonalMessageApi.getPersonalInfo();
     user.value = data;
-    // 初始化未读通知数量
     if (data?.id) {
       try {
         const response = await NotificationService.getUnreadNotifications(data.id);
@@ -284,15 +320,21 @@ onMounted(() => {
   window.addEventListener('resize', () => {
     isMobile.value = window.innerWidth <= 768;
   });
+  initTabState();
   fetchUserInfo();
 });
 
 const switchTab = (tab, markAsRead = false) => {
-  activeTab.value = tab;
-  activeMenu.value = tab;
-  drawerVisible.value = false;
-  if (markAsRead && tab === 'notifications' && user.value) {
-    notificationStore.markAllAsRead();
+  if (validTabs.includes(tab)) {
+    activeTab.value = tab;
+    activeMenu.value = tab;
+    drawerVisible.value = false;
+    localStorage.setItem('personalCenterActiveTab', tab); // 儲存當前標籤
+    // 更新路由參數，保持同步
+    router.replace({ name: 'PersonalCenter', query: { tab } });
+    if (markAsRead && tab === 'notifications-unread' && user.value) {
+      notificationStore.markAllAsRead();
+    }
   }
 };
 
@@ -349,6 +391,7 @@ const saveProfile = async () => {
 
 onUnmounted(() => {
   if (previewAvatar.value) URL.revokeObjectURL(previewAvatar.value);
+  window.removeEventListener('resize', () => {});
 });
 
 const beforeEmailUpload = (file) => {
@@ -410,7 +453,10 @@ setInterval(() => {
   }
 }, 3600 * 1000);
 
-const logout = () => router.push('/main');
+const logout = () => {
+  localStorage.removeItem('personalCenterActiveTab'); // 退出時清除標籤狀態
+  router.push('/main');
+};
 
 const submitFeedback = () => {
   if (feedbackContent.value.trim()) {
@@ -428,7 +474,6 @@ const submitFeedback = () => {
 .main-content { padding: 20px; }
 .content-card { background-color: #ffffff; border-radius: 8px; }
 .mobile-menu-btn { margin-bottom: 20px; }
-.image { width: 100%; height: 150px; object-fit: cover; }
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 .text-right { text-align: right; }

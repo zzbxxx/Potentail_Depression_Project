@@ -55,6 +55,7 @@ public class FavoriteController {
     public ResponseEntity<Boolean> checkFavorited(@RequestParam Long userId,
                                                   @RequestParam Long favoriteableId,
                                                   @RequestParam String favoriteableType) {
+        System.out.println("uid:"+userId+"fid:"+favoriteableId+ "ftype:"+ favoriteableType);
         log.info("检查收藏状态 - 用户ID: {}, 对象ID: {}, 类型: {}", userId, favoriteableId, favoriteableType);
         Boolean isFavorited = favoriteService.isFavorited(userId, favoriteableId, favoriteableType);
         return ResponseEntity.ok(isFavorited);

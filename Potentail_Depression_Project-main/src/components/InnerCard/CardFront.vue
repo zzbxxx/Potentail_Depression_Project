@@ -2,23 +2,23 @@
   <article class="card">
     <header class="card-header">
       <img
-        v-if="demo.cover"
+        v-if="cardData.cover"
         class="card-cover"
-        :src="demo.cover"
-        :alt="demo.title || 'cover image'"
+        :src="cardData.cover"
+        :alt="cardData.title || 'cover image'"
         loading="lazy"
       />
     </header>
 
     <section class="card-content">
-      <p v-if="demo.desc" class="desc">
-        {{ demo.desc }}
+      <p v-if="cardData.desc" class="desc">
+        {{ cardData.desc }}
       </p>
       <slot name="content"></slot>
 
-      <div v-if="demo.title || demo.author" class="meta">
-        <h3 v-if="demo.title" class="book-title">《{{ demo.title }}》</h3>
-        <p v-if="demo.author" class="subtitle">{{ demo.author }}</p>
+      <div v-if="cardData.title || cardData.author" class="meta">
+        <h3 v-if="cardData.title" class="book-title">《{{ cardData.title }}》</h3>
+        <p v-if="cardData.author" class="subtitle">{{ cardData.author }}</p>
       </div>
     </section>
 
@@ -27,9 +27,13 @@
         type="primary"
         size="small"
         class="calm-btn"
-        @click="$emit('primary')"
+        @click="handleCardToCollection"
       >
-        收藏起来
+        <el-icon :size="16">
+          <Star :style="{ color: isFavorited ? '#fadb14' : '#606266' }" />
+        </el-icon>
+        <span v-if="!isFavorited">收藏</span>
+        <span v-else>已收藏</span>
       </el-button>
       <el-button size="small" class="ghost-btn" @click="$emit('close')">
         我先休息一下
@@ -39,27 +43,81 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { onMounted, reactive , ref} from 'vue';
 // @ts-ignore
 import MoodApiService from '/src/api/moodApi.js';
+import { ElMessage } from 'element-plus';
+import { Star } from '@element-plus/icons-vue';
+// @ts-ignore
+import FavoriteService from '/src/api/favoriteApi';
 
-const demo = reactive({
+const cardData = reactive({
+  id: null as number | null,
   cover: '',
   title: '',
   author: '',
   desc: ''
 });
+const isFavorited = ref(false);
+
+const checkFavorite = async () => {
+  const favoriteableType = 'Card';
+  try {
+    const response = await FavoriteService.checkFavorite(cardData.id, favoriteableType);
+    isFavorited.value = response;
+  } catch (error) {
+    console.error('檢查收藏狀態失敗:', error);
+    ElMessage.error('檢查收藏狀態失敗');
+  }
+};
+
+const handleCardToCollection = async () => {
+  const favorite = {
+      favoriteableId: cardData.id,
+      favoriteableType: 'Card',
+      category: '卡片收藏'
+    };
+    const removeFavorite = {
+      favoriteableId: cardData.id,
+      favoriteableType: 'Card',
+    }
+  
+    if( isFavorited.value){
+      try {
+        await FavoriteService.removeFavorite(removeFavorite);
+        isFavorited.value = false;
+        ElMessage.warning('已取消收藏');
+      } catch (error) {
+        console.error('取消收藏失敗:', error);
+        ElMessage.error('取消收藏失敗');
+      }
+    } else {
+      try {
+        await FavoriteService.addFavorite(favorite);
+        isFavorited.value = true;
+        ElMessage.success('已收藏');
+      } catch (error) {
+        console.error('收藏失敗:', error);
+        ElMessage.error('收藏失敗');
+      } 
+    }
+}
 
 async function getCardInfo() {
-    const { bookTitle, author, quoteText } = await MoodApiService.getTodayCard();
-    Object.assign(demo, {
+    const { id ,bookTitle, author, quoteText } = await MoodApiService.getTodayCard();
+    Object.assign(cardData, {
+      id,
       cover: 'src/assets/image/FT.jpg',
       title: bookTitle,
       author,
       desc: quoteText
     });
 }
-getCardInfo();
+
+onMounted(async() => {
+  await getCardInfo();
+  await checkFavorite();
+});
 </script>
 
 <style scoped>

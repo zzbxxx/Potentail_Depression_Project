@@ -52,7 +52,7 @@
           @click="gotoAudit"
           :icon="Clock"
         >
-        <span>审核</span>
+        <span>管理中心</span>
       </el-button>
     <RecoveryCode
       v-model="showRecoveryCode" 
@@ -83,7 +83,6 @@
 
   <card-popup
     v-model="show"
-    @primary="onAddToList"
     @open="onOpen"
     @close="onClose"
   />
@@ -110,14 +109,12 @@ import AnnoHole from '../components/AnnoHole.vue'
 import todayCardImage from '../assets/image/today-card.jpg'
 import anonCardImage from '../assets/image/anon-card.jpg'
 import progressCardImage from '../assets/image/progress-card.jpg'
-import { log } from 'three/src/nodes/TSL.js'
 const showRecoveryCode = ref(false)
 const buttonRef = ref(null)
 const buttonElement = ref(null)
 const clickCount = ref(0)
 const show = ref(false)
 const isAccountLogin = ref(true)
-const submitting = ref(false)
 const annoShow = ref(false)
 const goToHome = () => {
   window.location.href = '/'
@@ -127,17 +124,6 @@ function gotoEditor(){
   router.push('/editor')
 }
 
-async function onAddToList() {
-  submitting.value = true
-  try {
-    await MoodApiService.addToList(demo.title, demo.author)
-    ElMessage.success('已成功加入书单')
-  } catch (error) {
-    ElMessage.error('加入书单失败')
-  } finally {
-    submitting.value = false
-  }
-}
 const router = useRouter()
 async function goToDateLog() {
   router.push('/mood-log')

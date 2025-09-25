@@ -1,5 +1,6 @@
 package com.example.depressive.mood.repository;
 
+import com.example.depressive.mood.entity.UserCardsLog;
 import com.example.depressive.mood.entity.UserMoodLog;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -15,5 +16,6 @@ public interface UserMoodLogRepository extends JpaRepository<UserMoodLog, Long> 
 
     boolean existsByUserId(Long userId);
 
-    List<UserMoodLog> findByUserId(Long userId);
+    List<UserMoodLog> findByUserId(long userId);
+
 }

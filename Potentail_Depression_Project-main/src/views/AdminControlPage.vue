@@ -39,6 +39,10 @@
             <el-icon><ChatDotSquare /></el-icon>
             <span>反馈管理</span>
           </el-menu-item>
+          <el-menu-item index="card-management" @click="switchTab('card-management')">
+            <el-icon><ChatDotSquare /></el-icon>
+            <span>卡片管理</span>
+          </el-menu-item>
         </el-menu>
       </el-aside>
 
@@ -73,6 +77,10 @@
             <el-icon><ChatDotSquare /></el-icon>
             <span>反馈管理</span>
           </el-menu-item>
+          <el-menu-item index="card-management" @click="switchTab('card-management')">
+            <el-icon><ChatDotSquare /></el-icon>
+            <span>卡片管理</span>
+          </el-menu-item>
         </el-menu>
       </el-drawer>
 
@@ -99,6 +107,12 @@
               <el-empty description="暂无反馈管理功能"></el-empty>
             </div>
           </transition>
+          <transition name="fade">
+            <div v-if="activeTab === 'card-management'">
+              <h3>卡片管理</h3>
+              <el-empty description="暂无卡片管理功能"></el-empty>
+            </div>
+          </transition>
         </el-card>
       </el-main>
     </el-container>
@@ -106,46 +120,83 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage, ElIcon } from 'element-plus'
-import { Document, User, ChatDotSquare, Menu } from '@element-plus/icons-vue'
-import ArticleAudit from '/src/components/audit/ArticleAudit.vue'
+import { ref, onMounted, onUnmounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { ElMessage, ElIcon } from 'element-plus';
+import { Document, User, ChatDotSquare, Menu } from '@element-plus/icons-vue';
+import ArticleAudit from '/src/components/audit/ArticleAudit.vue';
 
-const router = useRouter()
-const isMobile = ref(window.innerWidth <= 768)
-const drawerVisible = ref(false)
-const activeMenu = ref('article-audit')
-const activeTab = ref('pending') // 默认显示待通过（pending）
+const router = useRouter();
+const route = useRoute();
+const isMobile = ref(window.innerWidth <= 768);
+const drawerVisible = ref(false);
+const activeMenu = ref('pending');
+const activeTab = ref('pending');
 
-// 切换选项卡
+// 有效標籤列表
+const validTabs = [
+  'pending',
+  'approved',
+  'rejected',
+  'user-management',
+  'feedback',
+  'card-management',
+];
+
+// 初始化標籤狀態
+const initTabStatus = () => {
+  const tabFromQuery = route.query.tab;
+  const tabFromStorage = localStorage.getItem('AdminControlPage-activeTab');
+  const defaultTab = 'pending';
+
+  if (tabFromQuery && validTabs.includes(tabFromQuery)) {
+    activeTab.value = tabFromQuery;
+    activeMenu.value = tabFromQuery === 'pending' || tabFromQuery === 'approved' || tabFromQuery === 'rejected' ? tabFromQuery : tabFromQuery;
+    localStorage.setItem('AdminControlPage-activeTab', tabFromQuery);
+  } else if (tabFromStorage && validTabs.includes(tabFromStorage)) {
+    activeTab.value = tabFromStorage;
+    activeMenu.value = tabFromStorage === 'pending' || tabFromStorage === 'approved' || tabFromStorage === 'rejected' ? tabFromStorage : tabFromStorage;
+  } else {
+    activeTab.value = defaultTab;
+    activeMenu.value = defaultTab;
+    localStorage.setItem('AdminControlPage-activeTab', defaultTab);
+  }
+};
+
+// 切換標籤
 const switchTab = (tab) => {
-  activeTab.value = tab
-  activeMenu.value = `article-audit/${tab}` // 更新 activeMenu 以反映子菜单状态
-  drawerVisible.value = false
-}
+  if (validTabs.includes(tab)) {
+    activeTab.value = tab;
+    activeMenu.value = tab === 'pending' || tab === 'approved' || tab === 'rejected' ? tab : tab;
+    localStorage.setItem('AdminControlPage-activeTab', tab);
+    router.replace({ name: 'AdminControlPage', query: { tab } });
+  } else {
+    ElMessage.error('无效的选项卡');
+  }
+};
 
 // 退出
 const logout = () => {
-  router.push('/main')
-}
+  localStorage.removeItem('AdminControlPage-activeTab');
+  router.push('/main'); // 跳轉到主頁
+};
 
-// 监听窗口大小变化
+// 監聽窗口大小變化
 onMounted(() => {
+  initTabStatus();
   window.addEventListener('resize', () => {
-    isMobile.value = window.innerWidth <= 768
-  })
-})
+    isMobile.value = window.innerWidth <= 768;
+  });
+});
 
 onUnmounted(() => {
   window.removeEventListener('resize', () => {
-    isMobile.value = window.innerWidth <= 768
-  })
-})
+    isMobile.value = window.innerWidth <= 768;
+  });
+});
 </script>
 
 <style scoped>
-/* 保持原有样式不变 */
 .admin-control {
   height: 100vh;
   background: linear-gradient(135deg, #e6f0fa 0%, #f5e6e8 100%);
@@ -206,7 +257,6 @@ onUnmounted(() => {
   }
 }
 
-/* 暗色模式适配 */
 @media (prefers-color-scheme: dark) {
   .admin-control {
     background: linear-gradient(135deg, rgba(30, 35, 41, 0.95) 0%, rgba(44, 62, 80, 0.95) 100%);

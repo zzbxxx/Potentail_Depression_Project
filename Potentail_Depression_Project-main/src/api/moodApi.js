@@ -55,4 +55,12 @@ export default class MoodApiService {
 
         return res.json();
     }
+
+    static async getCardByCardId(userId, contentId) {
+        const response = await fetch(`${this.BASE_URL}/getCardByCardId?userId=${userId}&contentId=${contentId}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        return response.json();
+    }
 }
