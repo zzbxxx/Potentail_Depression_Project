@@ -36,7 +36,19 @@ export default class MoodApiService {
     static async getCardHistoryInfo() {
         let userId = localStorage.getItem("userId") || localStorage.getItem("user_id")
 
-        const res = await fetch(`${this.BASE_URL}/cardHistory?userId=${userId}`, {
+        const res = await fetch(`${this.BASE_URL}/CardHistory?userId=${userId}`, {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' }
+        })
+
+        return res.json();
+
+    }
+
+    static async getBriefCardHistoryInfo() {
+        let userId = localStorage.getItem("userId") || localStorage.getItem("user_id")
+
+        const res = await fetch(`${this.BASE_URL}/BriefCardHistory?userId=${userId}`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' }
         })

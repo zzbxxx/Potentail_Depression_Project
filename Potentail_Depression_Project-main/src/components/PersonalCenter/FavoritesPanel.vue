@@ -44,7 +44,7 @@
         <el-col
           :xs="24"
           :sm="12"
-          :md="8"
+          :md="6"
           v-for="item in pagedCards"
           :key="item.favoriteId"
         >
@@ -88,20 +88,38 @@
           </el-card>
         </el-col>
       </el-row>
-      <p v-if="!cardFavorites.length" class="empty">暂无收藏卡片</p>
 
+      <p v-if="!cardFavorites.length" class="empty">暂无收藏卡片</p>
       <!-- 分页 -->
       <el-pagination
         v-if="cardFavorites.length"
         layout="total, sizes, prev, pager, next, jumper"
         :total="cardFavorites.length"
-        :page-sizes="[3, 6, 9, 12]"
+        :page-sizes="[4, 8, 12, 16]"
         :page-size="pageSize"
         v-model:current-page="cardPage"
         @size-change="handleSizeChange"
         class="pagination"
       />
     </div>
+    <!-- 遮罩層 -->
+    <el-dialog
+      v-model="showCardDetail"
+      width="380px"
+      :show-close="true"
+      :close-on-click-modal="true"
+      class="detail-dialog"
+    >
+      <CardLogCard
+        v-if="detailCard"
+        :date="detailCard.date"
+        :data="detailCard"
+        :width="'360px'" 
+        :height="'auto'"
+        @primary="handleCardPrimary"
+        @removed="handleCardRemoved"
+      />
+    </el-dialog>
   </div>
 </template>
 
@@ -119,13 +137,12 @@ const props = defineProps({
 
 const articleFavorites = ref([])
 const cardFavorites = ref([])
-
-// 分页状态
-const pageSize = ref(3) // 默認每頁 4 個卡片
+const detailCard = ref(null)
+const showCardDetail = ref(false)
+const pageSize = ref(4) // 修改：默認每頁4個
 const articlePage = ref(1)
 const cardPage = ref(1)
-
-// 计算分页数据
+const isFavorited = ref(false)
 const pagedArticles = computed(() => {
   const start = (articlePage.value - 1) * pageSize.value
   return articleFavorites.value.slice(start, start + pageSize.value)
@@ -147,11 +164,28 @@ const handleArticleClick = (favoriteableId) => {
   router.push({ name: 'DetailPage', params: { id: favoriteableId } })
 }
 
-const handleCardClick = (favoriteableId) => {
-  const contentId = favoriteableId
-  
-  const userId = localStorage.getItem('userId') || localStorage.getItem('user_id');
-  const res = MoodApiService.getCardByCardId(userId, contentId)
+const handleCardClick = async (favoriteableId) => {
+  try {
+    const userId = localStorage.getItem("userId") || localStorage.getItem("user_id")
+    if (!userId) {
+      ElMessage.error("用户未登录")
+      return
+    }
+    const res = await MoodApiService.getCardByCardId(userId, favoriteableId)
+    detailCard.value = {
+      id: res.id,
+      quoteText: res.quoteText,
+      author: res.author,
+      bookTitle: res.bookTitle,
+      tags: res.tags,
+      date: res.date,
+      isFavorited: res.isFavorited
+    }
+    showCardDetail.value = true
+  } catch (error) {
+    console.error("获取卡片详情失败：", error)
+    ElMessage.error("获取卡片详情失败")
+  }
 }
 
 const handleSizeChange = (newSize) => {
@@ -166,9 +200,7 @@ const handleCardToCollection = async (favoriteableId, favoriteableType, favorite
     favoriteableType,
     category: '卡片收藏'
   }
-
   try {
-    // 彈出確認框
     await ElMessageBox.confirm(
       '確定要取消收藏此卡片嗎？',
       '取消收藏',
@@ -178,12 +210,10 @@ const handleCardToCollection = async (favoriteableId, favoriteableType, favorite
         type: 'warning',
       }
     )
-
-    // 執行取消收藏
     const response = await FavoriteService.removeFavorite(favorite)
     if (response.code === 0) {
       ElMessage.success('取消收藏成功')
-      await favoriteList() // 刷新卡片收藏列表
+      await favoriteList()
     } else {
       ElMessage.error(response.message || '取消收藏失敗')
     }
@@ -197,20 +227,27 @@ const handleCardToCollection = async (favoriteableId, favoriteableType, favorite
   }
 }
 
-// 监听 activeTab 变化，重置分页并加载数据
+const handleCardPrimary = async () => {
+  await favoriteList() 
+}
+
+// 處理 CardLogCard 的 removed 事件
+const handleCardRemoved = async () => {
+  await favoriteList()
+  showCardDetail.value = false 
+}
+
 watch(() => props.activeTab, () => {
   resetPage()
   favoriteList()
 })
 
-// 获取收藏列表
 const favoriteList = async () => {
   const userId = localStorage.getItem("userId") || localStorage.getItem("user_id")
   if (!userId) {
     ElMessage.error("未找到用戶 ID")
     return
   }
-
   try {
     if (props.activeTab === 'favorites-articles') {
       const type = "ARTICLE"
@@ -233,7 +270,6 @@ onMounted(() => {
   favoriteList()
 })
 
-// 过滤预览内容
 const extractPreview = (content) => {
   if (!content) return ""
   try {
@@ -349,9 +385,19 @@ const formatTime = (t) => new Date(t).toLocaleString()
 
 .card-footer {
   display: flex;
-  gap: 8px;
+  flex-direction: row; 
+  flex-wrap: wrap; 
+  justify-content: flex-end; 
+  gap: 8px; 
   padding: 8px 12px 12px;
-  justify-content: flex-end;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.calm-btn.el-button, .ghost-btn.el-button {
+  flex: 1; 
+  min-width: 100px; 
+  max-width: 140px; 
 }
 
 .calm-btn.el-button {
@@ -378,6 +424,13 @@ const formatTime = (t) => new Date(t).toLocaleString()
   .card-fav {
     margin-bottom: 16px;
   }
+  .card-footer {
+    justify-content: space-between; /* 平板上按鈕分散排列 */
+  }
+  .calm-btn.el-button, .ghost-btn.el-button {
+    min-width: 80px; 
+    max-width: none; 
+  }
 }
 
 @media (max-width: 360px) {
@@ -393,6 +446,14 @@ const formatTime = (t) => new Date(t).toLocaleString()
   }
   .time {
     font-size: 11px;
+  }
+  .card-footer {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+  .calm-btn.el-button, .ghost-btn.el-button {
+    min-width: 0; /* 超小屏幕允許按鈕更窄 */
+    flex: 1; /* 保持平分 */
   }
 }
 </style>

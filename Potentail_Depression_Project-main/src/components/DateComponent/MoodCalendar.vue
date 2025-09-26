@@ -42,7 +42,7 @@ const props = defineProps({
     type: Object,
     default: () => ({})
   },
-  moodHistoryStore: { // 新增情感数据属性
+  moodHistoryStore: { 
     type: Object,
     default: () => ({})
   },
@@ -73,10 +73,9 @@ onUnmounted(() => {
 
 const handleDateSelect = (date) => {
   const formattedDate = date.toISOString().split('T')[0]
+  console.log(props.moodDataStore);
+  
   emit('date-change', formattedDate)
-  // 打印引言数据和情感数据
-  console.log(`Card Data for ${formattedDate}:`, props.moodDataStore[formattedDate] || 'No card data')
-  console.log(`Mood Data for ${formattedDate}:`, props.moodHistoryStore[formattedDate] || 'No mood data')
 }
 
 const handleMobileDateChange = (date) => {
@@ -90,7 +89,10 @@ const handleMobileDateChange = (date) => {
 }
 
 const emitDateChange = (day) => {
-  emit('date-change', day)
+
+  const cardId = props.moodDataStore[day]?.id || 'No ID found';
+  
+  emit('date-change', day , cardId)
 }
 </script>
 

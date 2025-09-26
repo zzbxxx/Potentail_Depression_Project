@@ -1,5 +1,9 @@
 package com.example.depressive.mood.service;
 
+import com.example.depressive.favorite.dto.FavoriteResponse;
+import com.example.depressive.favorite.entity.Favorite;
+import com.example.depressive.favorite.repository.FavoriteRepository;
+import com.example.depressive.mood.dto.CardHistoryDTO;
 import com.example.depressive.mood.dto.CardResp;
 import com.example.depressive.mood.entity.CardsContent;
 import com.example.depressive.mood.entity.UserCardsLog;
@@ -26,6 +30,7 @@ public class CardService {
     private final UserCardsLogRepository logRepo;
     private final UserMoodLogRepository moodRepo;
     private final RedisTemplate<String, Object> redis;
+    private final FavoriteRepository favoriteRepository;
 
     public CardResp todayCard(Long userId, boolean isGuest) {
         String key = "user:" + userId + ":card:recommendation" + (isGuest ? ":guest" : ":user");
@@ -94,6 +99,15 @@ public class CardService {
         resp.setTags(List.of(card.getTags().replaceAll("[\\[\\]\"]", "").split(",")));
         resp.setDate(logOptional.map(UserCardsLog::getDate).orElse(null));
 
+        // 檢查是否被收藏
+        boolean isFavorited = false;
+        if (logOptional.isPresent()) {
+            Long uclId = logOptional.get().getId(); // 獲取 UserCardsLog 的 ID
+            Optional<Favorite> favoriteOptional = favoriteRepository.findByUserIdAndUclId(userId, uclId);
+            isFavorited = favoriteOptional.isPresent(); // 如果存在收藏記錄，設置為 true
+        }
+        resp.setIsFavorited(isFavorited);
+
         return resp;
     }
 
@@ -161,5 +175,17 @@ public class CardService {
             case "calm" -> tags.contains("calm") || tags.contains("peaceful") || tags.contains("introspective");
             default -> true;
         };
+    }
+
+    public List<CardHistoryDTO> briefHistory(Long userId) {
+        return logRepo.findByUserIdOrderByDateDesc(userId)
+                .stream()
+                .map(l -> {
+                    CardHistoryDTO dto = new CardHistoryDTO();
+                    dto.setId(l.getContentId());
+                    dto.setDate(l.getDate());
+                    return dto;
+                })
+                .toList();
     }
 }

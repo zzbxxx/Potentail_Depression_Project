@@ -1,5 +1,6 @@
 package com.example.depressive.mood.controller;
 
+import com.example.depressive.mood.dto.CardHistoryDTO;
 import com.example.depressive.mood.dto.CardResp;
 import com.example.depressive.mood.service.CardService;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,11 @@ public class CardController {
     @GetMapping("/cardHistory")
     public List<CardResp> history(@RequestParam Long userId) {
         return service.history(userId);
+    }
+
+    @GetMapping("/BriefCardHistory")
+    public List<CardHistoryDTO> briefHistory(@RequestParam Long userId) {
+        return service.briefHistory(userId);
     }
 
     @GetMapping("/getCardByCardId")

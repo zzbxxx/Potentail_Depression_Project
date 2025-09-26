@@ -8,7 +8,9 @@ import com.example.depressive.favorite.entity.Favorite;
 import com.example.depressive.favorite.repository.FavoriteRepository;
 import com.example.depressive.article.entity.Topic;
 import com.example.depressive.mood.entity.CardsContent;
+import com.example.depressive.mood.entity.UserCardsLog;
 import com.example.depressive.mood.repository.CardsContentRepository;
+import com.example.depressive.mood.repository.UserCardsLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ public class FavoriteService {
     private final ArticleRepository articleRepository;
     private final TopicRepository topicRepository;
     private final CardsContentRepository cardsContentRepository;
+    private final UserCardsLogRepository userCardsLogRepository; // 新增依賴
 
     private static final String TYPE_ARTICLE = "ARTICLE";
     private static final String TYPE_TOPIC = "TOPIC";
@@ -57,8 +60,19 @@ public class FavoriteService {
             favorite.setCategory(request.getCategory());
             favorite.setIsPrivate(request.getIsPrivate() != null ? request.getIsPrivate() : true);
 
+            // 如果是 CARD 类型，查询 user_cards_log 表获取最新的 ucl_id
+            if (TYPE_CARD.equalsIgnoreCase(request.getFavoriteableType())) {
+                Optional<UserCardsLog> userCardLog = userCardsLogRepository.findTopByUserIdAndContentIdOrderByDateDesc(
+                        userId, request.getFavoriteableId().shortValue());
+                if (userCardLog.isEmpty()) {
+                    return new FavoriteResponse(1, "未找到对应的用户卡片记录");
+                }
+                favorite.setUclId(userCardLog.get().getId()); // 设置 ucl_id 为 UserCardsLog 的 id
+            }
+
             Favorite savedFavorite = favoriteRepository.save(favorite);
-            log.info("用户 {} 收藏了 {} ID: {}", userId, request.getFavoriteableType(), request.getFavoriteableId());
+            log.info("用户 {} 收藏了 {} ID: {}, UCL ID: {}", userId, request.getFavoriteableType(),
+                    request.getFavoriteableId(), favorite.getUclId());
 
             FavoriteDTO favoriteDTO = convertToDTO(savedFavorite);
             return new FavoriteResponse(0, "收藏成功", favoriteDTO);
@@ -164,6 +178,7 @@ public class FavoriteService {
         dto.setCategory(favorite.getCategory());
         dto.setCreatedAt(favorite.getCreatedAt());
         dto.setIsPrivate(favorite.getIsPrivate());
+        dto.setUclId(favorite.getUclId()); // 保持 long 類型
         return dto;
     }
 
@@ -198,7 +213,6 @@ public class FavoriteService {
                     dto.setTitle(c.getQuoteText());
                     dto.setContentPreview(c.getBookTitle() != null ? c.getBookTitle() : "");
                     dto.setAuthorNickname(c.getAuthor() != null ? c.getAuthor() : "未知作者");
-                    // 卡片無頭像，設置為空或默認值
                     dto.setAuthorAvatar(null);
                 });
             }

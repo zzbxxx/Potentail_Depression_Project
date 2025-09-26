@@ -3,7 +3,14 @@
     <h1>时间日志</h1>
     <div class="content">
       <div class="left-panel">
-        <CardLogCard v-if="currentView === 'card'" :date="selectedDate" :data="moodData" />
+        <CardLogCard
+          v-if="currentView === 'card'"
+          :date="selectedDate.value"
+          :data="detailCard"
+          @primary="fetchDetailedCardData"
+          @removed="handleCardRemoved"
+        />
+        <p v-if="currentView === 'card' && !detailCard" class="no-data">這一天沒有卡片數據喔</p>
         <MoodLogCard v-if="currentView === 'mood' && moodHistoryData" :date="selectedDate" :mood-data="moodHistoryData" />
         <p v-if="shouldShowNoData" class="no-data">{{ noDataMessage }}</p>
         <div class="button-group">
@@ -13,11 +20,11 @@
         </div>
       </div>
       <div class="right-panel">
-        <MoodCalendar 
-          :mood-data-store="moodDataStore" 
+        <MoodCalendar
+          :mood-data-store="moodDataStore"
           :mood-history-store="moodHistoryStore"
-          :marked-dates="markedDates" 
-          @date-change="handleDateChange" 
+          :marked-dates="markedDates"
+          @date-change="handleDateChange"
         />
       </div>
     </div>
@@ -26,119 +33,190 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import CardLogCard from '/src/components/DateComponent/CardLogCard.vue'
-import MoodLogCard from '/src/components/DateComponent/MoodLogCard.vue'
-import MoodCalendar from '/src/components/DateComponent/MoodCalendar.vue'
-import MoodApiService from '/src/api/moodApi.js'
+import { onMounted, ref, watch, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import { debounce } from 'lodash';
+import CardLogCard from '/src/components/DateComponent/CardLogCard.vue';
+import MoodLogCard from '/src/components/DateComponent/MoodLogCard.vue';
+import MoodCalendar from '/src/components/DateComponent/MoodCalendar.vue';
+import MoodApiService from '/src/api/moodApi.js';
+import FavoriteService from '/src/api/favoriteApi';
 
-const router = useRouter()
-const selectedDate = ref(new Date().toISOString().split('T')[0])
-const moodData = ref(null)
-const moodDataStore = ref({})
-const moodHistoryStore = ref({})
-const markedDates = ref([])
-const currentView = ref('card') 
-const moodHistoryData = ref(null)
+const router = useRouter();
+const selectedDate = ref(new Date().toISOString().split('T')[0]);
+const moodData = ref(null);
+const moodDataStore = ref({});
+const moodHistoryStore = ref({});
+const markedDates = ref([]);
+const currentView = ref('card');
+const moodHistoryData = ref(null);
+const detailCard = ref(null);
 
 const fetchCardData = async () => {
   try {
-    const info = await MoodApiService.getCardHistoryInfo()
+    const info = await MoodApiService.getBriefCardHistoryInfo();
     moodDataStore.value = info.reduce((acc, item) => {
       acc[item.date] = {
         id: item.id,
         quoteText: item.quoteText,
         author: item.author,
         bookTitle: item.bookTitle,
-        tags: item.tags
-      }
-      return acc
-    }, {})
-    markedDates.value = info.map(item => item.date)
-    moodData.value = moodDataStore.value[selectedDate.value] || null
+        tags: item.tags,
+      };
+      return acc;
+    }, {});
+    markedDates.value = info.map((item) => item.date);
+    moodData.value = moodDataStore.value[selectedDate.value] || null;
   } catch (error) {
-    console.error('API failed:', error)
-    ElMessage.error('获取卡片日志数据失败，请稍后再试')
+    console.error('API failed:', error);
+    ElMessage.error('獲取卡片日志數據失敗，請稍後再試');
   }
-}
+};
 
 const fetchMoodData = async () => {
   try {
-    const data = await MoodApiService.getMoodHistoryInfo()
+    const data = await MoodApiService.getMoodHistoryInfo();
     moodHistoryStore.value = data.reduce((acc, item) => {
       acc[item.date] = {
         text: item.text,
         primaryMood: item.primaryMood,
-        events: item.events
-      }
-      return acc
-    }, {})
-    // 初始加载时设置当前日期的数据
-    moodHistoryData.value = moodHistoryStore.value[selectedDate.value] || null
-    console.log('moodHistoryStore:', moodHistoryStore.value) // 调试
+        events: item.events,
+      };
+      return acc;
+    }, {});
+    moodHistoryData.value = moodHistoryStore.value[selectedDate.value] || null;
   } catch (error) {
-    console.error('API failed (mood):', error)
-    ElMessage.error('获取情绪日志数据失败，请稍后再试')
+    console.error('API failed (mood):', error);
+    ElMessage.error('獲取情緒日志數據失敗，請稍後再試');
   }
-}
+};
 
-onMounted(() => {
-  fetchCardData()
-  fetchMoodData()
-})
+const fetchDetailedCardData = debounce(async (date) => {
+  try {
+    if (!date) {
+      console.error('Invalid date provided, using selectedDate.value:', selectedDate.value);
+      date = selectedDate.value || new Date().toISOString().split('T')[0];
+    }
 
-watch([selectedDate, moodHistoryStore], ([newDate], [oldDate]) => {
-  moodHistoryData.value = moodHistoryStore.value[newDate] || null
-  console.log('Updated moodHistoryData:', moodHistoryData.value) // 调试
-})
+    const userId = localStorage.getItem('userId') || localStorage.getItem('user_id');
+    const cardId = moodDataStore.value[date]?.id;
+    console.log('Fetching card for date:', date, 'cardId:', cardId, 'userId:', userId);
 
-const handleDateChange = (formattedDate) => {
-  selectedDate.value = formattedDate
-  moodData.value = moodDataStore.value[formattedDate] || null
-  moodHistoryData.value = moodHistoryStore.value[formattedDate] || null
-}
+    if (!userId || !cardId) {
+      console.warn('Missing userId or cardId:', { userId, cardId });
+      ElMessage.warning(`日期 ${date} 沒有對應的卡片數據`);
+      detailCard.value = null;
+      return;
+    }
+
+    const res = await MoodApiService.getCardByCardId(userId, cardId);
+    console.log('API response from getCardByCardId:', res);
+
+    if (!res || !res.id) {
+      console.warn('Invalid or empty response from API:', res);
+      const backupData = moodDataStore.value[date];
+      if (backupData) {
+        console.log('Using backup data from moodDataStore:', backupData);
+        detailCard.value = {
+          id: backupData.id,
+          quoteText: backupData.quoteText,
+          author: backupData.author,
+          bookTitle: backupData.bookTitle,
+          tags: backupData.tags,
+          date,
+          isFavorited: false,
+        };
+        try {
+          const isFavorited = await FavoriteService.checkFavorite(cardId, 'CARD');
+          detailCard.value.isFavorited = isFavorited;
+        } catch (error) {
+          console.error('Failed to check favorite status:', error);
+          detailCard.value.isFavorited = false;
+        }
+      } else {
+        console.warn('No backup data available for date:', date);
+        detailCard.value = null;
+        ElMessage.error('卡片數據無效或不存在');
+      }
+      return;
+    }
+
+    detailCard.value = { ...res, date };
+    console.log('Updated detailCard:', detailCard.value);
+  } catch (error) {
+    console.error('Failed to fetch detailed card data:', error);
+    ElMessage.error('獲取卡片詳情失敗，請稍後再試');
+    detailCard.value = null;
+  }
+}, 300);
+
+const handleCardRemoved = async (date) => {
+  await fetchDetailedCardData(date);
+};
+
+onMounted(async () => {
+  console.log('onMounted: selectedDate.value:', selectedDate.value);
+  await fetchCardData();
+  await fetchMoodData();
+  await fetchDetailedCardData(selectedDate.value);
+});
+
+watch([selectedDate, moodHistoryStore], async ([newDate]) => {
+  console.log('watch: selectedDate.value:', newDate);
+  if (!newDate) {
+    console.error('selectedDate is invalid:', newDate);
+    selectedDate.value = new Date().toISOString().split('T')[0];
+  }
+  moodHistoryData.value = moodHistoryStore.value[newDate] || null;
+  moodData.value = moodDataStore.value[newDate] || null;
+  await fetchDetailedCardData(newDate);
+});
+
+const handleDateChange = async (formattedDate, cardId) => {
+  selectedDate.value = formattedDate;
+  moodData.value = moodDataStore.value[formattedDate] || null;
+  moodHistoryData.value = moodHistoryStore.value[formattedDate] || null;
+  await fetchDetailedCardData(formattedDate);
+};
 
 const goBack = () => {
-  router.push('/main')
-}
+  router.push('/main');
+};
 
 const handleCardClick = () => {
-  currentView.value = 'card' // 切换到卡片视图
-}
+  currentView.value = 'card';
+};
 
 const handleMessageClick = () => {
-  currentView.value = 'mood' // 切换到心情视图
-}
+  currentView.value = 'mood';
+};
 
 const handleOtherClick = () => {
-  console.log('点击了其他按钮')
-}
+  console.log('點擊了其他按鈕');
+};
 
-// 计算属性：判断是否显示无数据提示
 const shouldShowNoData = computed(() => {
-  if (currentView.value === 'card' && !moodData.value) {
-    return true
+  if (currentView.value === 'card' && !moodData.value && !detailCard.value) {
+    return true;
   } else if (currentView.value === 'mood' && !moodHistoryData.value) {
-    return true
+    return true;
   }
-  return false
-})
+  return false;
+});
 
-// 计算属性：动态生成无数据提示信息
 const noDataMessage = computed(() => {
-  if (currentView.value === 'card' && !moodData.value) {
-    return '这一天没有卡片数据喔'
+  if (currentView.value === 'card' && !moodData.value && !detailCard.value) {
+    return '這一天沒有卡片數據喔';
   } else if (currentView.value === 'mood' && !moodHistoryData.value) {
-    return '这一天没有心情数据喔'
+    return '這一天沒有心情數據喔';
   }
-  return ''
-})
+  return '';
+});
 </script>
 
 <style scoped>
-/* 样式保持不变 */
+
 .MoodLog {
   background: linear-gradient(135deg, #e6f0fa 0%, #f5e6e8 100%);
   padding: 1rem;

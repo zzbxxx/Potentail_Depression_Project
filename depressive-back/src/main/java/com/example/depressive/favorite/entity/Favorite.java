@@ -32,6 +32,9 @@ public class Favorite {
     @Column(name = "is_private")
     private Boolean isPrivate = true;
 
+    @Column(name = "ucl_id")
+    private Long uclId;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

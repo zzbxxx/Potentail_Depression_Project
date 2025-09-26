@@ -32,7 +32,7 @@ public class FollowService {
 
 
     @Transactional
-    public FollowResponse follow(FollowRequest request, long userId) {
+    public FollowResponse follow(FollowRequest request, Long userId) {
         Long followerId = userId;
         Long followedId = request.getFollowedId();
 

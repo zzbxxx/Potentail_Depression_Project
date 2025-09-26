@@ -1,5 +1,5 @@
 <template>
-  <article class="card" v-if="data">
+  <article class="card" v-if="data" :style="{ '--card-width': width, '--card-height': height }">
     <header class="card-header">
       <img
         class="card-cover"
@@ -24,35 +24,92 @@
         type="primary"
         size="small"
         class="calm-btn"
-        @click="$emit('primary')"
+        @click="handleCardToCollection"
       >
-        收藏起来
+        <el-icon :size="16">
+          <Star :style="{ color: data.isFavorited ? '#fadb14' : '#606266' }" />
+        </el-icon>
+        <span v-if="!data.isFavorited">收藏</span>
+        <span v-else>已收藏</span>
       </el-button>
     </footer>
   </article>
 </template>
 
 <script setup lang="ts">
-import { defineProps, defineEmits } from 'vue'
+import { defineProps, watch } from 'vue';
+import { Star } from '@element-plus/icons-vue';
+import { ElMessage, ElMessageBox } from 'element-plus';
+//@ts-ignore
+import FavoriteService from '/src/api/favoriteApi';
 
 interface Props {
-  date: string
+  date: string;
   data: {
-    id?: number
-    quoteText?: string
-    author?: string
-    bookTitle?: string
-    tags?: string[]
-  } | null
+    id?: number;
+    quoteText?: string;
+    author?: string;
+    bookTitle?: string;
+    tags?: string[];
+    isFavorited: boolean;
+  } | null;
+  width?: string;
+  height?: string;
 }
 
-defineProps<Props>()
+const props = defineProps<Props>();
+const emit = defineEmits<{
+  (e: 'removed'): void;
+  (e: 'primary'): void;
+  (e: 'close'): void;
+}>();
 
-defineEmits<{
-  (e: 'primary'): void
-  (e: 'close'): void
-}>()
+const handleCardToCollection = async () => {
+  if (!props.data || !props.data.id) {
+    console.error('Invalid card data:', props.data);
+    ElMessage.error('無效的卡片數據');
+    return;
+  }
+
+  const favorite = {
+    favoriteableId: props.data.id,
+    favoriteableType: 'CARD',
+  };
+
+  try {
+    if (props.data.isFavorited) {
+      await ElMessageBox.confirm(
+        '確定要取消收藏這張卡片嗎？',
+        '確認取消收藏',
+        {
+          confirmButtonText: '確定',
+          cancelButtonText: '取消',
+          type: 'warning',
+        }
+      );
+      console.log('Removing favorite for card:', props.data.id);
+      await FavoriteService.removeFavorite(favorite);
+      ElMessage.warning('已取消收藏');
+      emit('removed');
+    } else {
+      console.log('Adding favorite for card:', props.data.id);
+      await FavoriteService.addFavorite(favorite);
+      ElMessage.success('已收藏');
+      emit('primary');
+    }
+  } catch (error) {
+    console.error('Favorite operation failed:', error);
+    ElMessage.error(props.data.isFavorited ? '取消收藏失敗' : '收藏失敗');
+  }
+};
+
+watch(() => props.data, (newData) => {
+  console.log('props.data updated:', newData);
+}, { deep: true });
+
+console.log('Received props.date:', props.date);
 </script>
+
 
 <style scoped>
 .card {
@@ -64,7 +121,8 @@ defineEmits<{
   background: linear-gradient(180deg, #f9f1e7 0%, #ece1d8 48%); 
   color: #4a3c2f;
   border: 1px solid #e0d2c7; 
-  max-width: 320px; 
+  width: var(--card-width, 320px); /* 默認寬度 320px */
+  height: var(--card-height, auto); /* 默認高度 auto */
   margin: 0 auto; 
   padding-bottom: 1rem;
 }
@@ -77,8 +135,8 @@ defineEmits<{
 }
 
 .card-cover {
-  width: 176px; 
-  height: 220px; 
+  width: 55%; 
+  aspect-ratio: 4/5; /* 圖片比例適應 */
   object-fit: cover;
   border-radius: 8px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08); 
@@ -141,8 +199,8 @@ defineEmits<{
     padding: 12px 16px 6px;
   }
   .card-cover {
-    width: 100px; 
-    height: 133px;
+    width: 60%; 
+    aspect-ratio: 4/5;
   }
   .desc {
     font-size: 14px; 

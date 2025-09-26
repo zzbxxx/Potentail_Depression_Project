@@ -14,4 +14,5 @@ public class FavoriteDTO {
     private String category;
     private LocalDateTime createdAt;
     private Boolean isPrivate;
+    private Long uclId;
 }

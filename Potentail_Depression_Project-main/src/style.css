@@ -42,3 +42,8 @@
     padding: 10px;
     min-height: 100px;
 }
+
+.el-dialog {
+    background-color: transparent !important;
+    --el-dialog-bg-color: transparent !important;
+}

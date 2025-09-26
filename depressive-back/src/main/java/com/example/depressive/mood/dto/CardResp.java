@@ -13,4 +13,5 @@ public class CardResp {
     private String bookTitle;
     private List<String> tags;
     private LocalDate date;
+    private Boolean isFavorited;
 }
