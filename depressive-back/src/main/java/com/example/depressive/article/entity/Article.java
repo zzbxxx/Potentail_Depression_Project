@@ -51,6 +51,9 @@ public class Article {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    @Column(name = "is_public_in_follow", nullable = false)
+    private Boolean isPublicInFollow = true;
+
     @ManyToMany
     @JoinTable(
             name = "article_topics",

@@ -20,6 +20,22 @@
             <el-icon><User /></el-icon>
             <span>信息设置</span>
           </el-menu-item>
+          <el-sub-menu index="follow">
+            <template #title>
+              <el-icon><Bell /></el-icon>
+              <span>關注列表</span>
+            </template>
+            <el-menu-item index="follower" @click="switchTab('follower')">
+              關注的人
+            </el-menu-item>
+            <el-menu-item index="followed" @click="switchTab('followed')">
+              關注我的
+            </el-menu-item>
+          </el-sub-menu>
+          <el-menu-item index="articles-manage" @click="switchTab('articles-manage')">
+            <el-icon><User /></el-icon>
+            <span>文章管理</span>
+          </el-menu-item>
           <el-sub-menu index="notifications">
             <template #title>
               <el-icon><Bell /></el-icon>
@@ -67,6 +83,22 @@
             <el-icon><User /></el-icon>
             <span>信息设置</span>
           </el-menu-item>
+          <el-sub-menu index="follow">
+            <template #title>
+              <el-icon><Bell /></el-icon>
+              <span>關注列表</span>
+            </template>
+            <el-menu-item index="follower" @click="switchTab('follower')">
+              關注的人
+            </el-menu-item>
+            <el-menu-item index="followed" @click="switchTab('followed')">
+              關注我的
+            </el-menu-item>
+          </el-sub-menu>
+          <el-menu-item index="articles-manage" @click="switchTab('articles-manage')">
+            <el-icon><User /></el-icon>
+            <span>文章管理</span>
+          </el-menu-item>
           <el-sub-menu index="notifications">
             <template #title>
               <el-icon><Bell /></el-icon>
@@ -112,64 +144,32 @@
         <el-button icon="Menu" circle @click="drawerVisible = true" v-if="isMobile" class="mobile-menu-btn"></el-button>
         <el-card class="content-card" shadow="hover">
           <transition name="fade">
-            <div v-if="activeTab === 'profile'">
-              <h3>信息设置</h3>
-              <el-skeleton :rows="3" animated v-if="!user" />
-              <el-form v-else :model="user" :rules="formRules" ref="profileForm" label-width="120px">
-                <el-form-item label="用户名" prop="nickname">
-                  <el-input v-model="user.nickname" placeholder="请输入用户名" />
-                </el-form-item>
-                <el-form-item label="绑定邮箱" prop="email">
-                  <el-input v-model="user.email" placeholder="请输入邮箱" />
-                </el-form-item>
-                <el-form-item label="头像">
-                  <el-upload
-                    action="#"
-                    :show-file-list="false"
-                    :auto-upload="false"
-                    :on-change="handleAvatarChange"
-                    :before-upload="beforeUpload"
-                    :disabled="uploading"
-                  >
-                    <el-button type="primary" :loading="uploading">上传头像</el-button>
-                  </el-upload>
-                  <el-image
-                    v-if="previewAvatar || user.avatar"
-                    :src="previewAvatar || user.avatar"
-                    style="width: 50px; height: 50px; border-radius: 50%; margin-top: 10px;"
-                    fit="cover"
-                    :preview-src-list="[previewAvatar || user.avatar]"
-                  />
-                </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" @click="saveProfile">保存</el-button>
-                </el-form-item>
-              </el-form>
+            <ProfileSettings 
+              v-if="activeTab === 'profile'" 
+              :user="user" 
+              @update:user="handleUserUpdate"
+              @save-success="fetchUserInfo"
+            />
+          </transition>
+          <transition name="fade">
+            <div>
+              <transition name="fade">
+                <div v-if="activeTab === 'follower' || activeTab === 'followed'">
+                  <FollowDetail :active-tab="activeTab" />
+                </div>
+              </transition>
+            </div>
+          </transition>
+          <transition name="fade">
+            <div v-if="activeTab === 'articles-manage'">
+              <ArticleManagement />
             </div>
           </transition>
           <transition name="fade">
             <EmailManagement v-if="activeTab === 'email'" />
           </transition>
           <transition name="fade">
-            <div v-if="activeTab === 'emailUpload'">
-              <h3>邮箱上传</h3>
-              <el-form label-width="120px">
-                <el-form-item label="上传邮箱文件">
-                  <el-upload
-                    action="#"
-                    :show-file-list="false"
-                    :http-request="handleEmailUpload"
-                    :before-upload="beforeEmailUpload"
-                    :disabled="emailUploading"
-                  >
-                    <el-button type="primary" :loading="emailUploading">上传邮箱文件</el-button>
-                  </el-upload>
-                </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" @click="viewUploadedEmails">查看已上传邮箱</el-button>
-                </el-form-item>
-              </el-form>
-            </div>
+            <EmailUpload v-if="activeTab === 'emailUpload'" />
           </transition>
           <transition name="fade">
             <FavoritesPanel 
@@ -178,18 +178,7 @@
             />
           </transition>
           <transition name="fade">
-            <div v-if="activeTab === 'feedback'">
-              <h3>建议与反馈</h3>
-              <p class="encourage">您的反馈对我们很重要，感谢分享您的想法。</p>
-              <el-form label-width="120px">
-                <el-form-item label="反馈内容">
-                  <el-input type="textarea" v-model="feedbackContent" placeholder="请输入您的建议或反馈" :rows="5"></el-input>
-                </el-form-item>
-                <el-form-item>
-                  <el-button type="primary" @click="submitFeedback">提交</el-button>
-                </el-form-item>
-              </el-form>
-            </div>
+            <Feedback v-if="activeTab === 'feedback'" />
           </transition>
           <transition name="fade">
             <NotificationPanel 
@@ -222,7 +211,11 @@ import { useRouter, useRoute } from 'vue-router';
 import PersonalMessageApi from '/src/api/PersonalMessageApi';
 import { useNotificationStore } from '/src/stores/notification';
 import NotificationService from '/src/api/notificationApi';
-
+import ProfileSettings from '/src/components/PersonalCenter/ProfileSettings.vue';
+import EmailUpload from '/src/components/PersonalCenter/EmailUpload.vue';
+import Feedback from '/src/components/PersonalCenter/Feedback.vue';
+import ArticleManagement from '/src/components/PersonalCenter/ArticleManagement.vue';
+import FollowDetail from '/src/components/PersonalCenter/FollowDetail.vue'
 const router = useRouter();
 const route = useRoute();
 const isMobile = ref(window.innerWidth <= 768);
@@ -266,8 +259,16 @@ const validTabs = [
   'favorites-cards',
   'email',
   'emailUpload',
-  'feedback'
+  'feedback',
+  'follower', 
+  'followed',
+  'articles-manage'
 ];
+
+
+const handleUserUpdate = (updatedUser) => {
+  user.value = updatedUser;
+};
 
 // 初始化標籤狀態
 const initTabState = () => {
@@ -337,121 +338,6 @@ const switchTab = (tab, markAsRead = false) => {
     }
   }
 };
-
-const beforeUpload = (file) => {
-  const isImage = file.type.startsWith('image/');
-  const isLt2M = file.size / 1024 / 1024 < 2;
-  if (!isImage) {
-    ElMessage.error('请上传图片文件');
-    return false;
-  }
-  if (!isLt2M) {
-    ElMessage.error('图片大小不能超过 2MB');
-    return false;
-  }
-  return false;
-};
-
-const handleAvatarChange = (uploadFile) => {
-  if (previewAvatar.value) URL.revokeObjectURL(previewAvatar.value);
-  avatarFile.value = uploadFile.raw;
-  previewAvatar.value = URL.createObjectURL(avatarFile.value);
-};
-
-const handleUpload = async () => {
-  if (!avatarFile.value) return;
-  uploading.value = true;
-  try {
-    const { url, publicUrl } = await PersonalMessageApi.getPicturePresignedUrl(avatarFile.value.name, avatarFile.value.type);
-    const uploadSuccess = await PersonalMessageApi.uploadFile(url, avatarFile.value);
-    if (uploadSuccess) user.value.avatar = publicUrl;
-    else throw new Error('上传到 Backblaze B2 失败');
-  } catch (error) {
-    ElMessage.error(`上传失败：${error.message || '请稍后重试，或联系支持团队'}`);
-    console.error('Upload error:', error);
-  } finally {
-    uploading.value = false;
-  }
-};
-
-const saveProfile = async () => {
-  try {
-    if (avatarFile.value) await handleUpload();
-    await PersonalMessageApi.putPersonalInfo(user.value);
-    ElMessage.success('保存成功');
-    if (previewAvatar.value) {
-      URL.revokeObjectURL(previewAvatar.value);
-      previewAvatar.value = '';
-    }
-    avatarFile.value = null;
-  } catch (error) {
-    ElMessage.error(`保存失败：${error.message || '请稍后重试，或联系支持团队'}`);
-  }
-};
-
-onUnmounted(() => {
-  if (previewAvatar.value) URL.revokeObjectURL(previewAvatar.value);
-  window.removeEventListener('resize', () => {});
-});
-
-const beforeEmailUpload = (file) => {
-  const isCsvOrTxt = file.type === 'text/csv' || file.type === 'text/plain';
-  const isLt5M = file.size / 1024 / 1024 < 5;
-  if (!isCsvOrTxt) {
-    ElMessage.error('请上传 CSV 或 TXT 文件');
-    return false;
-  }
-  if (!isLt5M) {
-    ElMessage.error('文件大小不能超过 5MB');
-    return false;
-  }
-  emailFile.value = file;
-  return false;
-};
-
-const handleEmailUpload = async () => {
-  if (!emailFile.value) return;
-  emailUploading.value = true;
-  try {
-    const { url, publicUrl } = await PersonalMessageApi.getEmailPresignedUrl(emailFile.value.name, emailFile.value.type);
-    const uploadSuccess = await PersonalMessageApi.uploadFile(url, emailFile.value);
-    if (uploadSuccess) ElMessage.success('邮箱文件上传成功！');
-    else throw new Error('上传邮箱文件到 Backblaze B2 失败');
-  } catch (error) {
-    ElMessage.error(`上传失败：${error.message || '请稍后重试，或联系支持团队'}`);
-    console.error('Email Upload error:', error);
-  } finally {
-    emailUploading.value = false;
-  }
-};
-
-const viewUploadedEmails = async () => {
-  try {
-    const files = await PersonalMessageApi.listUploadedEmails();
-    ElMessage.success(`已上传 ${files.length} 个邮箱文件`);
-    console.log('Uploaded email files:', files);
-  } catch (error) {
-    ElMessage.error(`获取失败：${error.message || '请稍后重试，或联系支持团队'}`);
-    console.error('List email files error:', error);
-  }
-};
-
-const refreshDownloadUrl = async (fileKey) => {
-  try {
-    const url = await PersonalMessageApi.getPicturePresignedDownloadUrl(fileKey);
-    user.value.avatar = url;
-    console.log('Refreshed Download URL:', url);
-  } catch (error) {
-    console.error('Refresh download URL error:', error);
-  }
-};
-
-setInterval(() => {
-  if (user.value?.avatar && user.value.avatar.includes('X-Amz-Expires')) {
-    const fileKey = user.value.avatar.split('/avatars/')[1].split('?')[0];
-    refreshDownloadUrl(fileKey);
-  }
-}, 3600 * 1000);
 
 const logout = () => {
   localStorage.removeItem('personalCenterActiveTab'); // 退出時清除標籤狀態

@@ -1,126 +1,139 @@
 <template>
-  <div class="favorites-container">
-    <h3 v-if="activeTab === 'favorites-articles'">文章收藏</h3>
-    <h3 v-else-if="activeTab === 'favorites-cards'">卡片收藏</h3>
+<div class="favorites-container">
+  <h3 v-if="activeTab === 'favorites-articles'">文章收藏</h3>
+  <h3 v-else-if="activeTab === 'favorites-cards'">卡片收藏</h3>
 
-    <!-- 文章收藏 -->
-    <div v-if="activeTab === 'favorites-articles'">
-      <el-row :gutter="20">
-        <el-col
-          :span="24"
-          v-for="item in pagedArticles"
-          :key="item.favoriteId"
+  <!-- 文章收藏 -->
+  <div v-if="activeTab === 'favorites-articles'">
+    <el-row :gutter="20">
+      <el-col
+        :span="24"
+        v-for="item in pagedArticles"
+        :key="item.favoriteId"
+      >
+        <el-card
+          shadow="hover"
+          class="article-card"
+          @click="handleArticleClick(item.favoriteableId)"
         >
-          <el-card @click="handleArticleClick(item.favoriteableId)" shadow="hover" class="article-card">
-            <div class="article-header">
-              <el-avatar :src="item.authorAvatar || 'https://via.placeholder.com/50'" size="small" />
-              <span class="nickname">{{ item.authorNickname || '匿名' }}</span>
-              <span class="time">{{ formatTime(item.createdAt) }}</span>
+          <!-- 使用 ArticlePreview 組件 -->
+          <ArticlePreview :article="item" />
+          
+          <div class="article-footer">
+            <span class="time">{{ formatTime(item.createdAt) }}</span>
+            <div class="actions">
+              <el-button
+                text
+                type="primary"
+                size="small"
+                @click.stop="handleArticleToCollection(item.favoriteableId, item.favoriteableType, item.favoriteId)"
+              >
+                取消收藏
+              </el-button>
             </div>
-            <h4 class="title">{{ item.title }}</h4>
-            <p class="preview">{{ extractPreview(item.contentPreview) }}</p>
-          </el-card>
-        </el-col>
-      </el-row>
-      
-      <p v-if="!articleFavorites.length" class="empty">暂无收藏文章</p>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
+    
+    <p v-if="!articleFavorites.length" class="empty">暂无收藏文章</p>
 
-      <!-- 分页 -->
-      <el-pagination
-        v-if="articleFavorites.length"
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="articleFavorites.length"
-        :page-sizes="[5, 10, 20, 50]"
-        :page-size="pageSize"
-        v-model:current-page="articlePage"
-        @size-change="handleSizeChange"
-        class="pagination"
-      />
-    </div>
-
-    <!-- 卡片收藏 -->
-    <div v-else-if="activeTab === 'favorites-cards'">
-      <el-row :gutter="20">
-        <el-col
-          :xs="24"
-          :sm="12"
-          :md="6"
-          v-for="item in pagedCards"
-          :key="item.favoriteId"
-        >
-          <el-card shadow="hover" class="card-fav">
-            <article class="card" @click="handleCardClick(item.favoriteableId)">
-              <header class="card-header">
-                <img
-                  class="card-cover"
-                  src="/src/assets/image/FT.jpg"
-                  :alt="item.contentPreview || 'cover image'"
-                  loading="lazy"
-                />
-              </header>
-              <section class="card-content">
-                <div class="meta">
-                  <h3 v-if="item.contentPreview" class="book-title">《{{ item.contentPreview }}》</h3>
-                  <p class="time">{{ formatTime(item.createdAt) }}</p>
-                </div>
-              </section>
-              <footer class="card-footer">
-                <el-button
-                  type="primary"
-                  size="small"
-                  class="calm-btn"
-                  @click.stop="handleCardToCollection(item.favoriteableId, item.favoriteableType, item.favoriteId)"
-                >
-                  <el-icon :size="16">
-                    <Star :style="{ color: '#fadb14' }" />
-                  </el-icon>
-                  <span>取消收藏</span>
-                </el-button>
-                <el-button
-                  size="small"
-                  class="ghost-btn"
-                  @click.stop="handleCardClick(item.favoriteableId)"
-                >
-                  查看詳情
-                </el-button>
-              </footer>
-            </article>
-          </el-card>
-        </el-col>
-      </el-row>
-
-      <p v-if="!cardFavorites.length" class="empty">暂无收藏卡片</p>
-      <!-- 分页 -->
-      <el-pagination
-        v-if="cardFavorites.length"
-        layout="total, sizes, prev, pager, next, jumper"
-        :total="cardFavorites.length"
-        :page-sizes="[4, 8, 12, 16]"
-        :page-size="pageSize"
-        v-model:current-page="cardPage"
-        @size-change="handleSizeChange"
-        class="pagination"
-      />
-    </div>
-    <!-- 遮罩層 -->
-    <el-dialog
-      v-model="showCardDetail"
-      width="380px"
-      :show-close="true"
-      :close-on-click-modal="true"
-      class="detail-dialog"
-    >
-      <CardLogCard
-        v-if="detailCard"
-        :date="detailCard.date"
-        :data="detailCard"
-        :width="'360px'" 
-        :height="'auto'"
-        @primary="handleCardPrimary"
-        @removed="handleCardRemoved"
-      />
-    </el-dialog>
+    <!-- 分页 -->
+    <el-pagination
+      v-if="articleFavorites.length"
+      layout="total, sizes, prev, pager, next, jumper"
+      :total="articleFavorites.length"
+      :page-sizes="[5, 10, 20, 50]"
+      :page-size="pageSize"
+      v-model:current-page="articlePage"
+      @size-change="handleSizeChange"
+      class="pagination"
+    />
   </div>
+
+  <!-- 卡片收藏 -->
+  <div v-else-if="activeTab === 'favorites-cards'">
+    <el-row :gutter="20">
+      <el-col
+        :xs="24"
+        :sm="12"
+        :md="6"
+        v-for="item in pagedCards"
+        :key="item.favoriteId"
+      >
+        <el-card shadow="hover" class="card-fav">
+          <article class="card" @click="handleCardClick(item.favoriteableId)">
+            <header class="card-header">
+              <img
+                class="card-cover"
+                src="/src/assets/image/FT.jpg"
+                :alt="item.contentPreview || 'cover image'"
+                loading="lazy"
+              />
+            </header>
+            <section class="card-content">
+              <div class="meta">
+                <h3 v-if="item.contentPreview" class="book-title">《{{ item.contentPreview }}》</h3>
+                <p class="time">{{ formatTime(item.createdAt) }}</p>
+              </div>
+            </section>
+            <footer class="card-footer">
+              <el-button
+                type="primary"
+                size="small"
+                class="calm-btn"
+                @click.stop="handleCardToCollection(item.favoriteableId, item.favoriteableType, item.favoriteId)"
+              >
+                <el-icon :size="16">
+                  <Star :style="{ color: '#fadb14' }" />
+                </el-icon>
+                <span>取消收藏</span>
+              </el-button>
+              <el-button
+                size="small"
+                class="ghost-btn"
+                @click.stop="handleCardClick(item.favoriteableId)"
+              >
+                查看詳情
+              </el-button>
+            </footer>
+          </article>
+        </el-card>
+      </el-col>
+    </el-row>
+
+    <p v-if="!cardFavorites.length" class="empty">暂无收藏卡片</p>
+    <!-- 分页 -->
+    <el-pagination
+      v-if="cardFavorites.length"
+      layout="total, sizes, prev, pager, next, jumper"
+      :total="cardFavorites.length"
+      :page-sizes="[4, 8, 12, 16]"
+      :page-size="pageSize"
+      v-model:current-page="cardPage"
+      @size-change="handleSizeChange"
+      class="pagination"
+    />
+  </div>
+  <!-- 遮罩層 -->
+  <el-dialog
+    v-model="showCardDetail"
+    width="380px"
+    :show-close="true"
+    :close-on-click-modal="true"
+    class="detail-dialog"
+  >
+    <CardLogCard
+      v-if="detailCard"
+      :date="detailCard.date"
+      :data="detailCard"
+      :width="'360px'" 
+      :height="'auto'"
+      @primary="handleCardPrimary"
+      @removed="handleCardRemoved"
+    />
+  </el-dialog>
+</div>
 </template>
 
 <script setup>
@@ -130,6 +143,8 @@ import { Star } from "@element-plus/icons-vue"
 import FavoriteService from "/src/api/favoriteApi"
 import { useRouter } from "vue-router"
 import MoodApiService from "/src/api/moodApi"
+import ArticlePreview from "/src/components/article/ArticlePreview.vue"
+
 const router = useRouter()
 const props = defineProps({
   activeTab: { type: String, required: true }
@@ -139,14 +154,16 @@ const articleFavorites = ref([])
 const cardFavorites = ref([])
 const detailCard = ref(null)
 const showCardDetail = ref(false)
-const pageSize = ref(4) // 修改：默認每頁4個
+const pageSize = ref(4)
 const articlePage = ref(1)
 const cardPage = ref(1)
 const isFavorited = ref(false)
+
 const pagedArticles = computed(() => {
   const start = (articlePage.value - 1) * pageSize.value
   return articleFavorites.value.slice(start, start + pageSize.value)
 })
+
 const pagedCards = computed(() => {
   const start = (cardPage.value - 1) * pageSize.value
   return cardFavorites.value.slice(start, start + pageSize.value)
@@ -194,6 +211,39 @@ const handleSizeChange = (newSize) => {
   cardPage.value = 1
 }
 
+const handleArticleToCollection = async (favoriteableId, favoriteableType, favoriteId) => {
+  const favorite = {
+    favoriteableId,
+    favoriteableType,
+    category: '文章收藏'
+  }
+  try {
+    await ElMessageBox.confirm(
+      '確定要取消收藏此文章嗎？',
+      '取消收藏',
+      {
+        confirmButtonText: '確定',
+        cancelButtonText: '取消',
+        type: 'warning',
+      }
+    )
+    const response = await FavoriteService.removeFavorite(favorite)
+    if (response.code === 0) {
+      ElMessage.success('取消收藏成功')
+      await favoriteList()
+    } else {
+      ElMessage.error(response.message || '取消收藏失敗')
+    }
+  } catch (error) {
+    if (error === 'cancel') {
+      ElMessage.info('已取消操作')
+    } else {
+      console.error('取消收藏失敗:', error)
+      ElMessage.error('取消收藏失敗')
+    }
+  }
+}
+
 const handleCardToCollection = async (favoriteableId, favoriteableType, favoriteId) => {
   const favorite = {
     favoriteableId,
@@ -228,13 +278,12 @@ const handleCardToCollection = async (favoriteableId, favoriteableType, favorite
 }
 
 const handleCardPrimary = async () => {
-  await favoriteList() 
+  await favoriteList()
 }
 
-// 處理 CardLogCard 的 removed 事件
 const handleCardRemoved = async () => {
   await favoriteList()
-  showCardDetail.value = false 
+  showCardDetail.value = false
 }
 
 watch(() => props.activeTab, () => {
@@ -292,34 +341,40 @@ const formatTime = (t) => new Date(t).toLocaleString()
 
 <style scoped>
 .favorites-container {
-  max-height: 86vh;
+  padding: 16px;
+  max-height: 80vh;
   overflow-y: auto;
-  padding: 12px;
-  box-sizing: border-box;
   width: 100%;
 }
 
-.article-card, .card-fav {
-  border-radius: 6px;
-  margin-bottom: 20px;
-  padding: 10px;
-  width: 100%;
-  box-sizing: border-box;
+.article-card {
+  margin-bottom: 16px;
+  border-radius: 8px;
 }
 
-.article-header {
+.article-footer {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.article-footer .actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  margin-bottom: 8px;
 }
 
-.nickname { font-size: 14px; color: #666; }
-.title { font-weight: 600; margin: 6px 0; }
-.preview { font-size: 13px; color: #444; margin-bottom: 6px; }
-.time { font-size: 12px; color: #999; margin-left: auto; }
-.empty { color: #999; text-align: center; margin-top: 20px; }
+.time {
+  font-size: 12px;
+  color: #999;
+}
+
+.empty {
+  color: #999;
+  text-align: center;
+  margin-top: 20px;
+}
 
 .pagination {
   margin: 16px auto;
@@ -385,19 +440,19 @@ const formatTime = (t) => new Date(t).toLocaleString()
 
 .card-footer {
   display: flex;
-  flex-direction: row; 
-  flex-wrap: wrap; 
-  justify-content: flex-end; 
-  gap: 8px; 
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
   padding: 8px 12px 12px;
   width: 100%;
   box-sizing: border-box;
 }
 
 .calm-btn.el-button, .ghost-btn.el-button {
-  flex: 1; 
-  min-width: 100px; 
-  max-width: 140px; 
+  flex: 1;
+  min-width: 100px;
+  max-width: 140px;
 }
 
 .calm-btn.el-button {
@@ -425,11 +480,11 @@ const formatTime = (t) => new Date(t).toLocaleString()
     margin-bottom: 16px;
   }
   .card-footer {
-    justify-content: space-between; /* 平板上按鈕分散排列 */
+    justify-content: space-between;
   }
   .calm-btn.el-button, .ghost-btn.el-button {
-    min-width: 80px; 
-    max-width: none; 
+    min-width: 80px;
+    max-width: none;
   }
 }
 
@@ -452,8 +507,8 @@ const formatTime = (t) => new Date(t).toLocaleString()
     gap: 6px;
   }
   .calm-btn.el-button, .ghost-btn.el-button {
-    min-width: 0; /* 超小屏幕允許按鈕更窄 */
-    flex: 1; /* 保持平分 */
+    min-width: 0;
+    flex: 1;
   }
 }
 </style>

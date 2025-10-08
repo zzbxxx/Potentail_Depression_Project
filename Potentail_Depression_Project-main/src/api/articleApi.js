@@ -98,4 +98,21 @@ export default class ArticleService {
         });
         return response.json();
     }
+
+    static async getArticlesByUserId(userId) {
+        const response = await fetch(`/${this.BASE_URL}/getArticlesByUserId?userId=${userId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        return response.json();
+    }
+
+    static async updatePublicStatus(articleId, userId, isPublicInFollow) {
+        const response = await fetch(`/${this.BASE_URL}/updatePublicStatus?articleId=${articleId}&userId=${userId}&isPublicInFollow=${isPublicInFollow}`, {
+            method: 'POST',
+        })
+        return response.json();
+    }
 }

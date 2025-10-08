@@ -63,7 +63,50 @@ public class ArticleService {
             .allowAttributes("href").onElements("a")
             .toFactory();
 
-    // 现有 createArticle 方法（保持不变）
+
+    public List<ArticleResp> getArticlesByUserId(Long userId) throws IOException {
+        List<Article> articles = articleRepository.findByUserIdAndStatus(
+                userId, Article.ArticleStatus.APPROVED
+        );
+        return articles.stream().map(article -> {
+            ArticleResp resp = new ArticleResp();
+            resp.setId(article.getId());
+            resp.setTitle(article.getTitle());
+            resp.setArticleType(article.getArticleType().name());
+            resp.setTopics(article.getTopics().stream()
+                    .map(topic -> topic.getName())
+                    .collect(Collectors.toSet()));
+            try {
+                resp.setBlocks(objectMapper.readValue(
+                        article.getContent(),
+                        new com.fasterxml.jackson.core.type.TypeReference<List<ArticleResp.BlockDTO>>() {}
+                ));
+            } catch (IOException e) {
+                throw new RuntimeException("解析文章內容失敗", e);
+            }
+            resp.setStatus(article.getStatus().name());
+            resp.setCreatedAt(article.getCreatedAt());
+            resp.setNickname(article.getUser().getNickname());
+            resp.setAvatar(article.getUser().getAvatar());
+            resp.setUserId(article.getUser().getId());
+            resp.setIsPublicInFollow(article.getIsPublicInFollow()); // 已修復
+            return resp;
+        }).collect(Collectors.toList());
+    }
+
+    public void updateArticlePublicStatus(Long articleId, Long userId, Boolean isPublicInFollow) {
+        Article article = articleRepository.findById(articleId)
+                .orElseThrow(() -> new IllegalArgumentException("文章不存在"));
+
+        // 驗證操作者是否為文章作者
+        if (!article.getUser().getId().equals(userId)) {
+            throw new IllegalArgumentException("僅限文章作者修改公開狀態");
+        }
+
+        article.setIsPublicInFollow(isPublicInFollow);
+        article.setUpdatedAt(LocalDateTime.now());
+        articleRepository.save(article);
+    }
     @Transactional
     public Article createArticle(ArticleReq articleDTO, MultipartFile[] images) throws IOException {
         // 验证 userId
@@ -273,9 +316,13 @@ public class ArticleService {
 
     @Transactional(readOnly = true)
     public List<ArticleResp> getApprovedArticles() throws IOException {
-        List<Article> articles = articleRepository.findByStatus(Article.ArticleStatus.APPROVED);
+        // 修改為查詢 status=APPROVED 且 isPublicInFollow=true 的文章
+        List<Article> articles = articleRepository.findByStatusAndIsPublicInFollow(
+                Article.ArticleStatus.APPROVED, true
+        );
         return articles.stream().map(this::convertToResp).collect(Collectors.toList());
     }
+
 
     public List<ArticleResp> getRejectedArticles() {
         List<Article> articles = articleRepository.findByStatus(Article.ArticleStatus.REJECTED);

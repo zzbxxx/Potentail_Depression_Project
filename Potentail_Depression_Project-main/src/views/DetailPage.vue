@@ -11,7 +11,8 @@
         <AuthorInfo v-if="article" :author="{
           nickname: article.nickname,
           avatar: article.avatar,
-          createdAt: article.createdAt
+          createdAt: article.createdAt,
+          authorId: article.userId
         }" />
         
         <ArticleDisplay v-if="article" :article="article" />

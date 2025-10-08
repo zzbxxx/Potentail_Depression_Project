@@ -5,33 +5,90 @@
       <span class="nickname">{{ author.nickname || '匿名' }}</span>
       <span class="created-at">{{ formatDate(author.createdAt) }}</span>
     </div>
-    <el-button class="follow-btn" type="text">关注</el-button>
+    <el-button
+      class="follow-btn"
+      type="text"
+      v-if="userId && userId != author.authorId"
+      @click="debouncedToggleFollow"
+    >
+      <span v-if="!Following">关注</span>
+      <span v-else>已关注</span>
+    </el-button>
   </div>
 </template>
 
 <script setup>
-import { ElAvatar } from 'element-plus'
+import { ElAvatar, ElMessage } from 'element-plus';
+import { onMounted, ref } from 'vue';
+import FollowService from '/src/api/followApi'
+import { ca } from 'element-plus/es/locales.mjs';
+import { debounce } from 'lodash';
 
-defineProps({
+const props = defineProps({
   author: {
     type: Object,
     required: true,
     default: () => ({
       nickname: null,
       avatar: null,
-      createdAt: null
+      createdAt: null,
+      authorId: null
     })
   }
-})
+});
+const Following = ref(false);
 
-const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d395c9d8b2e3e3f1f2c8e7b2f7.png'
+const defaultAvatar = 'https://cube.elemecdn.com/0/88/03b0d395c9d8b2e3e3f1f2c8e7b2f7.png';
+const userId = ref(localStorage.getItem('userId') || localStorage.getItem('user_id'));
 
 // 格式化日期
 const formatDate = (dateString) => {
-  if (!dateString) return '未知'
-  const date = new Date(dateString)
-  return date.toLocaleString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  if (!dateString) return '未知';
+  const date = new Date(dateString);
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
+const checkFollow = async () => {
+  if (!userId.value) return;
+  const result = await FollowService.checkFollow(userId.value, props.author.authorId);
+  
+  if (result.following) {
+    Following.value = true;
+  }
+};
+
+const toggleFollow = async () => {
+  try {
+    console.log(Following.value);
+    
+    if(Following.value){
+      const response =await FollowService.unfollow(userId.value, props.author.authorId);
+      if (response.code === 0) {
+        Following.value = false;
+        ElMessage.success('取消关注成功');
+      }
+    }else{
+      const response = await FollowService.follow(userId.value, props.author.authorId);
+      if (response.code === 0){
+        Following.value = true;
+        ElMessage.success('关注成功');
+      }
+    }
+  }catch (error) {
+    console.log(error);
+  }
 }
+const debouncedToggleFollow = debounce(toggleFollow, 500);
+
+onMounted(() => {
+  checkFollow();
+});
 </script>
 
 <style scoped>

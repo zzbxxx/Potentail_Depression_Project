@@ -10,4 +10,7 @@ public interface ArticleRepository extends JpaRepository<Article, Long> {
     List<Article> findByStatus(Article.ArticleStatus status);
 
     List<Article> findByUserIdInAndStatus(List<Long> userIds, Article.ArticleStatus status);
+
+    List<Article> findByUserIdAndStatus(Long userId, Article.ArticleStatus articleStatus);
+    List<Article> findByStatusAndIsPublicInFollow(Article.ArticleStatus status, Boolean isPublicInFollow);
 }

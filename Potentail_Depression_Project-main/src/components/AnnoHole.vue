@@ -38,53 +38,20 @@
       <el-scrollbar height="calc(100% - 50px)">
         <div class="article-list">
           <el-card
-            v-for="article in filteredArticles"
+            v-for="article in articles"
             :key="article.id"
             shadow="hover"
             class="article-card"
           >
-            <div class="article-header">
-              <el-avatar
-                v-if="article.avatar"
-                :src="article.avatar"
-                size="small"
-              />
-              <span class="nickname">{{ article.nickname || '匿名' }}</span>
-              <el-tag type="info" size="small" class="ml-2">
-                {{ article.articleType }}
-              </el-tag>
-              <el-tag
-                v-for="t in article.topics"
-                :key="t"
-                type="success"
-                size="small"
-                class="ml-1"
-              >
-                {{ t }}
-              </el-tag>
-            </div>
-            <h3 class="article-title">{{ article.title || '未命名标题' }}</h3>
-            <div class="article-preview">
-              <div
-                v-if="firstTextBlock(article)"
-                class="preview-text"
-              >
-                {{ firstTextBlock(article) }}
-              </div>
-              <el-image
-                v-if="firstImageBlock(article)"
-                :src="firstImageBlock(article)"
-                fit="cover"
-                class="preview-img"
-                lazy
-              />
-            </div>
+            <ArticlePreview :article="article" />
+
             <div class="article-footer">
               <el-button text size="small" @click="openDetail(article)">
                 查看详情 &gt;
               </el-button>
               <span class="time">{{ formatTime(article.createdAt) }}</span>
             </div>
+
             <ActionBar
               :article="article"
               :show-actions="{
@@ -95,19 +62,16 @@
                 more: true
               }"
               :gap="8"
-              @like="like"
-              @favorite="favorite"
-              @share="share"
-              @love="love"
-              @report="report"
-              @dislikeArticle="dislikeArticle"
-              @dislikeAuthor="dislikeAuthor"
-              @toggleMenu="val => toggleMenu(article, val)"
+              @like="$emit('like', article)"
+              @favorite="$emit('favorite', article)"
+              @share="$emit('share', article)"
+              @love="$emit('love', article)"
+              @report="$emit('report', article)"
+              @dislikeArticle="$emit('dislikeArticle', article)"
+              @dislikeAuthor="$emit('dislikeAuthor', article)"
+              @toggleMenu="val => $emit('toggleMenu', article, val)"
             />
           </el-card>
-          <p v-if="!filteredArticles.length" class="no-articles">
-            {{ searchQuery || selectedTopic ? '暂无匹配结果' : '暂无文章' }}
-          </p>
         </div>
       </el-scrollbar>
     </div>
@@ -120,7 +84,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import ActionBar from '/src/components/article/ActionBar.vue'
 import ArticleService from '../api/articleApi.js'
-
+import ArticlePreview from '/src/components/article/ArticlePreview.vue'
 const menuVisible = reactive({})
 const articles = ref([])
 const originalArticles = ref([])
@@ -222,6 +186,8 @@ const close = () => {
 }
 const router = useRouter()
 const openDetail = (article) => {
+  console.log(article);
+  
   router.push({ name: 'DetailPage', params: { id: article.id } })
   ElMessage.info(`跳转到文章 ${article.id} 的详情页`)
 }

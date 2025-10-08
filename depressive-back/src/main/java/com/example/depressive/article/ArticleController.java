@@ -3,6 +3,7 @@ package com.example.depressive.article;
 import com.example.depressive.article.dto.ArticleReq;
 import com.example.depressive.article.dto.ArticleResp;
 import com.example.depressive.article.entity.Article;
+import com.example.depressive.article.repository.ArticleRepository;
 import com.example.depressive.article.service.ArticleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,15 @@ public class ArticleController {
     @Autowired
     private ArticleService articleService;
 
+    @Autowired
+    private ArticleRepository articleRepository;
+
+    @GetMapping("/getArticlesByUserId")
+    public ResponseEntity<List<ArticleResp>> getArticlesByUserId(@RequestParam Long userId) throws IOException, IOException {
+
+        List<ArticleResp> articles = articleService.getArticlesByUserId(userId);
+        return ResponseEntity.ok(articles);
+    }
     @PostMapping("/putArticleData")
     public ResponseEntity<Article> createArticle(
             @RequestPart("article") ArticleReq articleDTO,
@@ -47,6 +57,7 @@ public class ArticleController {
         List<ArticleResp> articles = articleService.getArticlesByArticleId(articleId);
         return ResponseEntity.ok(articles);
     }
+
 
     @PostMapping("/updateStatus")
     public ResponseEntity<Map<String, Object>> updateArticleStatus(
@@ -81,5 +92,28 @@ public class ArticleController {
     public ResponseEntity<List<ArticleResp>> getRejectedArticles() throws IOException {
         List<ArticleResp> articles = articleService.getRejectedArticles();
         return ResponseEntity.ok(articles);
+    }
+    @PostMapping("/updatePublicStatus")
+    public ResponseEntity<Map<String, Object>> updatePublicStatus(
+            @RequestParam Long articleId,
+            @RequestParam Long userId,
+            @RequestParam Boolean isPublicInFollow
+    ) {
+        System.out.println("article:"+articleId);
+        Map<String, Object> response = new HashMap<>();
+        try {
+            articleService.updateArticlePublicStatus(articleId, userId, isPublicInFollow);
+            response.put("success", true);
+            response.put("message", "文章公開狀態更新成功");
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            response.put("success", false);
+            response.put("message", "更新公開狀態失敗: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "服務器錯誤: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
     }
 }

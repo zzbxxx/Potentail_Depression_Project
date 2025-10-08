@@ -6,6 +6,7 @@ import PersonalCenter from '../views/PersonalCenter.vue'
 import NotFound from '../views/MessageCode/NotFound404.vue'
 import Editror from '../views/Editor.vue'
 import DetailPage from '../views/DetailPage.vue'
+import UserDetailPage from '../views/UserDetailPage.vue'
 import AdminControlPage from '../views/AdminControlPage.vue'
 // @ts-ignore
 import { useAudioStore } from '../stores/audio'
@@ -20,6 +21,12 @@ const routes = [
         path: '/main',
         name: 'MainPage',
         component: MainPage,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/userDetail/:id',
+        name: 'UserDetailPage',
+        component: UserDetailPage,
         meta: { requiresAuth: true }
     },
     {

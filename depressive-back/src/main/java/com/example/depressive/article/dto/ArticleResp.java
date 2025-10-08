@@ -18,6 +18,7 @@ public class ArticleResp {
     private String nickname;
     private String avatar;
     private Long userId;
+    private Boolean isPublicInFollow;
 
     @Data
     public static class BlockDTO {
