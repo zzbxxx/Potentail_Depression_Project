@@ -27,7 +27,9 @@ public class NotificationController {
                 request.getUserId(),
                 request.getTitle(),
                 request.getContent(),
-                request.getNotificationType());
+                request.getNotificationType(),
+                request.getTriggerUserId()
+        );
         webSocketHandler.sendNotification(notification.getUser().getId(), notification);
         return ResponseEntity.ok(notification);
     }

@@ -201,7 +201,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import { User, Message, Star, Bell, Menu, ChatDotSquare, Upload } from '@element-plus/icons-vue';
 import EmailManagement from '/src/components/PersonalCenter/EmailManagement.vue';
@@ -215,38 +215,16 @@ import ProfileSettings from '/src/components/PersonalCenter/ProfileSettings.vue'
 import EmailUpload from '/src/components/PersonalCenter/EmailUpload.vue';
 import Feedback from '/src/components/PersonalCenter/Feedback.vue';
 import ArticleManagement from '/src/components/PersonalCenter/ArticleManagement.vue';
-import FollowDetail from '/src/components/PersonalCenter/FollowDetail.vue'
+import FollowDetail from '/src/components/PersonalCenter/FollowDetail.vue';
+
 const router = useRouter();
 const route = useRoute();
 const isMobile = ref(window.innerWidth <= 768);
 const drawerVisible = ref(false);
 const activeMenu = ref('profile');
 const activeTab = ref('profile');
-const previewAvatar = ref('');
 const user = ref(null);
 const notificationStore = useNotificationStore();
-
-const formRules = ref({
-  nickname: [
-    { required: false, message: '请输入用户名', trigger: 'blur' },
-    { min: 1, max: 50, message: '用户名长度在 1 到 50 个字符', trigger: 'blur' }
-  ],
-  email: [
-    {
-      validator: (rule, value, callback) => {
-        if (!value) callback();
-        else if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(value)) callback();
-        else callback(new Error('请输入有效的邮箱地址'));
-      },
-      trigger: ['blur', 'change']
-    }
-  ],
-});
-const feedbackContent = ref('');
-const avatarFile = ref(null);
-const emailFile = ref(null);
-const uploading = ref(false);
-const emailUploading = ref(false);
 
 const unreadCount = computed(() => notificationStore.unreadCount);
 
@@ -260,11 +238,10 @@ const validTabs = [
   'email',
   'emailUpload',
   'feedback',
-  'follower', 
+  'follower',
   'followed',
   'articles-manage'
 ];
-
 
 const handleUserUpdate = (updatedUser) => {
   user.value = updatedUser;
@@ -272,7 +249,6 @@ const handleUserUpdate = (updatedUser) => {
 
 // 初始化標籤狀態
 const initTabState = () => {
-  // 從路由參數獲取 tab，如果不存在則從 localStorage 獲取，否則預設為 'profile'
   const tabFromQuery = route.query.tab;
   const tabFromStorage = localStorage.getItem('personalCenterActiveTab');
   const defaultTab = 'profile';
@@ -291,9 +267,15 @@ const initTabState = () => {
   }
 };
 
+const userId = localStorage.getItem('userId') || localStorage.getItem('user_id');
+
 const fetchUserInfo = async () => {
+  if (!userId) {
+    ElMessage.error('用戶ID無效，無法載入資料');
+    return;
+  }
   try {
-    const data = await PersonalMessageApi.getPersonalInfo();
+    const data = await PersonalMessageApi.getPersonalInfo(userId);
     user.value = data;
     if (data?.id) {
       try {
@@ -325,13 +307,18 @@ onMounted(() => {
   fetchUserInfo();
 });
 
+watch(activeTab, (newTab) => {
+  if (newTab === 'profile') {
+    fetchUserInfo();
+  }
+});
+
 const switchTab = (tab, markAsRead = false) => {
   if (validTabs.includes(tab)) {
     activeTab.value = tab;
     activeMenu.value = tab;
     drawerVisible.value = false;
-    localStorage.setItem('personalCenterActiveTab', tab); // 儲存當前標籤
-    // 更新路由參數，保持同步
+    localStorage.setItem('personalCenterActiveTab', tab);
     router.replace({ name: 'PersonalCenter', query: { tab } });
     if (markAsRead && tab === 'notifications-unread' && user.value) {
       notificationStore.markAllAsRead();
@@ -340,7 +327,7 @@ const switchTab = (tab, markAsRead = false) => {
 };
 
 const logout = () => {
-  localStorage.removeItem('personalCenterActiveTab'); // 退出時清除標籤狀態
+  localStorage.removeItem('personalCenterActiveTab');
   router.push('/main');
 };
 
@@ -350,6 +337,12 @@ const submitFeedback = () => {
     feedbackContent.value = '';
   } else ElMessage.warning('请填写反馈内容');
 };
+
+onUnmounted(() => {
+  window.removeEventListener('resize', () => {
+    isMobile.value = window.innerWidth <= 768;
+  });
+});
 </script>
 
 <style scoped>
@@ -364,7 +357,7 @@ const submitFeedback = () => {
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 .text-right { text-align: right; }
 .encourage { font-size: 14px; color: #909399; margin-bottom: 20px; }
-.notification-badge { margin-left: 10px; margin-bottom: 2rem;}
+.notification-badge { margin-left: 10px; margin-bottom: 2rem; }
 @media (max-width: 768px) {
   .header h2 { font-size: 20px; }
   .main-content { padding: 10px; }

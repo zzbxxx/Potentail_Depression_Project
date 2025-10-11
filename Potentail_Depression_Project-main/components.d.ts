@@ -39,6 +39,8 @@ declare module 'vue' {
     ElCheckboxGroup: typeof import('element-plus/es')['ElCheckboxGroup']
     ElCol: typeof import('element-plus/es')['ElCol']
     ElContainer: typeof import('element-plus/es')['ElContainer']
+    ElDescriptions: typeof import('element-plus/es')['ElDescriptions']
+    ElDescriptionsItem: typeof import('element-plus/es')['ElDescriptionsItem']
     ElDialog: typeof import('element-plus/es')['ElDialog']
     ElDrawer: typeof import('element-plus/es')['ElDrawer']
     ElDropdown: typeof import('element-plus/es')['ElDropdown']
@@ -70,6 +72,7 @@ declare module 'vue' {
     ElTabPane: typeof import('element-plus/es')['ElTabPane']
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
+    ElText: typeof import('element-plus/es')['ElText']
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     ElUpload: typeof import('element-plus/es')['ElUpload']
     EmailCompotent: typeof import('./src/components/emailCompotent.vue')['default']
@@ -99,6 +102,8 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     TextBlock: typeof import('./src/components/Editor/TextBlock.vue')['default']
     Toolbar: typeof import('./src/components/Editor/Toolbar.vue')['default']
+    UserArticlesPanel: typeof import('./src/components/userInfo/UserArticlesPanel.vue')['default']
+    UserInfoPanel: typeof import('./src/components/userInfo/UserInfoPanel.vue')['default']
   }
   export interface GlobalDirectives {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

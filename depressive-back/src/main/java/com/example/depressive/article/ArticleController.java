@@ -23,8 +23,6 @@ public class ArticleController {
     @Autowired
     private ArticleService articleService;
 
-    @Autowired
-    private ArticleRepository articleRepository;
 
     @GetMapping("/getArticlesByUserId")
     public ResponseEntity<List<ArticleResp>> getArticlesByUserId(@RequestParam Long userId) throws IOException, IOException {

@@ -2,9 +2,8 @@ export default class PersonalMessageApi {
     static BASE_URL = 'http://localhost:8080/api/picture';
     static EMAIL_BASE_URL = 'http://localhost:8080/api/email';
 
-    static async getPersonalInfo() {
+    static async getPersonalInfo(userId) {
 
-        const userId = localStorage.getItem('userId') || localStorage.getItem('user_id');
         if (!userId) throw new Error('缺少 userId');
 
         const res = await fetch(

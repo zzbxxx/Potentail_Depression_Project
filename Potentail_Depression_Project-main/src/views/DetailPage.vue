@@ -4,7 +4,7 @@
       <el-skeleton v-if="isLoading" :rows="6" animated />
       <template v-else>
         <div class="header">
-          <h1>文章详情</h1>
+          <h1>文章詳情</h1>
           <el-button type="primary" @click="goBack">返回</el-button>
         </div>
         
@@ -25,18 +25,16 @@
               like: true,
               favorite: true,
               share: true,
-              love: true,
               more: true
             }"
             :gap="8"
-            @like="like"
-            @favorite="favorite"
-            @share="share"
-            @love="love"
-            @report="report"
-            @dislikeArticle="dislikeArticle"
-            @dislikeAuthor="dislikeAuthor"
-            @toggleMenu="val => toggleMenu(article, val)"
+            @like="handleArticleLike"
+            @favorite="handleArticleFavorite"
+            @share="handleArticleShare"
+            @report="handleArticleReport"
+            @dislikeArticle="handleArticleDislike"
+            @dislikeAuthor="handleArticleDislikeAuthor"
+            @toggleMenu="val => handleToggleMenu(article, val)"
           />
         </div>
         
@@ -55,6 +53,7 @@ import AuthorInfo from '/src/components/article/AuthorInfo.vue';
 import ReplySection from '/src/components/article/ReplySection.vue';
 import ActionBar from '/src/components/article/ActionBar.vue';
 import { ElMessage } from 'element-plus';
+
 const router = useRouter();
 const route = useRoute();
 const articleId = route.params.id;
@@ -62,11 +61,9 @@ const article = ref(null);
 const menuVisible = reactive({});
 const isLoading = ref(true);
 
-
-// 获取文章数据
 const fetchArticle = async () => {
   if (!articleId) {
-    ElMessage.error('无效的文章 ID');
+    ElMessage.error('無效的文章 ID');
     isLoading.value = false;
     return;
   }
@@ -75,12 +72,11 @@ const fetchArticle = async () => {
     article.value = Array.isArray(response) ? response[0] : response;
     if (article.value) {
       article.value.likes = article.value.likes || 0;
-      article.value.loves = article.value.loves || 0;
       article.value.liked = article.value.liked || false;
     }
   } catch (error) {
-    console.error('获取文章失败:', error);
-    ElMessage.error('获取文章失败');
+    console.error('獲取文章失敗:', error);
+    ElMessage.error('獲取文章失敗');
   } finally {
     isLoading.value = false;
   }
@@ -90,42 +86,35 @@ const goBack = () => {
   router.go(-1);
 };
 
-// ActionBar 事件处理
-const like = (article) => {
-  if (!article.liked) {
-    article.likes++;
-    article.liked = true;
-  } else {
-    article.likes--;
-    article.liked = false;
-  }
+const handleArticleLike = (updatedArticle) => {
+  article.value.liked = updatedArticle.liked;
+  article.value.likes = updatedArticle.likes;
 };
 
-const share = (article) => {
+// const handleArticleFavorite = (article) => {
+//   ElMessage.info(`收藏文章 ${article.id}`);
+// };
+
+const handleArticleShare = (article) => {
   ElMessage.success(`分享文章 ${article.id}`);
 };
 
-const love = (article) => {
-  article.loves++;
-  ElMessage.success('已喜欢~');
-};
-
-const report = (article) => {
-  ElMessage.warning(`已举报文章 ${article.id}`);
+const handleArticleReport = (article) => {
+  ElMessage.warning(`已舉報文章 ${article.id}`);
   menuVisible[article.id] = false;
 };
 
-const dislikeArticle = (article) => {
-  ElMessage.info(`将减少类似文章 ${article.id} 的推荐`);
+const handleArticleDislike = (article) => {
+  ElMessage.info(`將減少類似文章 ${article.id} 的推薦`);
   menuVisible[article.id] = false;
 };
 
-const dislikeAuthor = (article) => {
-  ElMessage.info(`将减少作者 ${article.nickname || '匿名'} 的内容`);
+const handleArticleDislikeAuthor = (article) => {
+  ElMessage.info(`將減少作者 ${article.nickname || '匿名'} 的內容`);
   menuVisible[article.id] = false;
 };
 
-const toggleMenu = (article, val) => {
+const handleToggleMenu = (article, val) => {
   const id = article.id;
   Object.keys(menuVisible).forEach(k => (menuVisible[k] = false));
   menuVisible[id] = val;
@@ -135,7 +124,6 @@ const closeAllMenu = () => {
   Object.keys(menuVisible).forEach(k => (menuVisible[k] = false));
 };
 
-// 页面加载和卸载
 onMounted(() => {
   document.addEventListener('click', closeAllMenu);
   fetchArticle();

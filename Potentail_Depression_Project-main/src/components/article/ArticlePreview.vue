@@ -6,6 +6,7 @@
         v-if="article.avatar"
         :src="article.avatar"
         size="small"
+        @click="handleUserClick(article.userId)"
       />
       <span class="nickname">{{ article.nickname || '匿名' }}</span>
       <el-tag type="info" size="small" class="ml-2">
@@ -45,6 +46,8 @@
 </template>
 
 <script setup>
+import { useRouter } from 'vue-router'
+const router = useRouter()
 const props = defineProps({
   article: {
     type: Object,
@@ -62,6 +65,10 @@ const firstTextBlock = (article) => {
 const firstImageBlock = (article) => {
   const block = article.blocks?.find(b => b.type === 'image')
   return block?.content || ''
+}
+
+const handleUserClick = (userId) => {
+  router.push(`/userDetail/${userId}`);
 }
 </script>
 

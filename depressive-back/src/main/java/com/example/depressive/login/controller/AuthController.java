@@ -3,6 +3,7 @@ package com.example.depressive.login.controller;
 import com.example.depressive.login.dto.*;
 import com.example.depressive.login.service.DeviceAuthService;
 import com.example.depressive.login.service.UserService;
+import com.example.depressive.util.IpLocationUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
@@ -22,16 +23,19 @@ public class AuthController {
     @Autowired
     private DeviceAuthService authService;
 
+    @Autowired
+    private IpLocationUtil ipLocationUtil; // 注入 IpLocationUtil
+
     @PostMapping("/register")
-    public Object register(@RequestBody RegisterRequest request) {
+    public Object register(@RequestBody RegisterRequest request, HttpServletRequest httpRequest) {
         try {
-            userService.register(request);
-            return new LoginResponse(){{
+            userService.register(request, httpRequest); // 傳遞 request 以獲取 IP
+            return new LoginResponse() {{
                 setCode(0);
                 setMessage("注册成功");
             }};
         } catch (Exception e) {
-            return new LoginResponse(){{
+            return new LoginResponse() {{
                 setCode(1);
                 setMessage(e.getMessage());
             }};
@@ -39,8 +43,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest request) {
-        return userService.login(request);
+    public LoginResponse login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        return userService.login(request, httpRequest);
     }
 
     @GetMapping("/check")
@@ -51,6 +55,4 @@ public class AuthController {
                 !(auth instanceof AnonymousAuthenticationToken);
         return Map.of("valid", valid);
     }
-
-
 }

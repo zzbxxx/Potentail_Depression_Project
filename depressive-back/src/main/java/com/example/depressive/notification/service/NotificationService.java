@@ -12,8 +12,8 @@ import org.springframework.stereotype.Service;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class NotificationService {
@@ -107,7 +107,7 @@ public class NotificationService {
         return notifications;
     }
 
-    public Notification createNotification(Long userId, String title, String content, String notificationType) {
+    public Notification createNotification(Long userId, String title, String content, String notificationType, Long triggerUserId) {
         Notification notification = new Notification();
         Optional<User> userOptional = userRepository.findById(userId);
         User user = userOptional.orElseThrow(() -> new RuntimeException("用户不存在"));
@@ -117,6 +117,7 @@ public class NotificationService {
         notification.setNotificationType(notificationType != null ? notificationType : "GENERAL");
         notification.setTimestamp(new Date());
         notification.setRead(false);
+        notification.setTriggerUserId(triggerUserId); // 設置觸發者ID
         Notification savedNotification = notificationRepository.save(notification);
 
         try {
@@ -153,6 +154,12 @@ public class NotificationService {
         dto.setNotificationType(notification.getNotificationType());
         dto.setTimestamp(notification.getTimestamp());
         dto.setRead(notification.isRead());
+        dto.setTriggerUserId(notification.getTriggerUserId());
+        // 根據 triggerUserId 查詢用戶名稱
+        if (notification.getTriggerUserId() != null) {
+            Optional<User> triggerUser = userRepository.findById(notification.getTriggerUserId());
+            triggerUser.ifPresent(user -> dto.setTriggerUsername(user.getUsername()));
+        }
         return dto;
     }
 }

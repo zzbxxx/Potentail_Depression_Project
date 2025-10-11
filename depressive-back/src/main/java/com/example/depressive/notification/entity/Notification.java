@@ -35,4 +35,7 @@ public class Notification {
 
     @Column(name = "notification_type", nullable = false)
     private String notificationType = "GENERAL";
+
+    @Column(name = "trigger_user_id") // 新增：觸發者ID
+    private Long triggerUserId;
 }

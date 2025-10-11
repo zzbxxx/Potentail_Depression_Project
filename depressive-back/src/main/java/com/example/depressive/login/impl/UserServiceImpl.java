@@ -7,11 +7,13 @@ import com.example.depressive.login.entity.User;
 import com.example.depressive.login.repository.UserRepository;
 import com.example.depressive.login.service.UserService;
 import com.example.depressive.login.util.JwtTokenUtil;
+import com.example.depressive.util.IpLocationUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Optional;
 
 @Service
@@ -19,19 +21,26 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserRepository userRepository;
-    private BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-    private final JwtTokenUtil jwtTokenUtil ;
-    // 使用构造器注入
+
+    @Autowired
+    private IpLocationUtil ipLocationUtil; // 注入 IpLocationUtil
+
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final JwtTokenUtil jwtTokenUtil;
+
     public UserServiceImpl(UserRepository userRepository,
                            BCryptPasswordEncoder passwordEncoder,
-                           JwtTokenUtil jwtTokenUtil) {
+                           JwtTokenUtil jwtTokenUtil,
+                           IpLocationUtil ipLocationUtil) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenUtil = jwtTokenUtil;
+        this.ipLocationUtil = ipLocationUtil;
     }
+
     @Override
-    public void register(RegisterRequest request) {
-        // 检查用户名或手机号是否已存在
+    public void register(RegisterRequest request, HttpServletRequest httpRequest) {
+        // 檢查用戶名或手機號是否已存在
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new RuntimeException("用户名已注册");
         }
@@ -42,11 +51,15 @@ public class UserServiceImpl implements UserService {
         user.setUsername(request.getUsername());
         user.setPhone(request.getPhone());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        // 獲取並儲存 IP 屬地
+        String clientIp = ipLocationUtil.getClientIp(httpRequest);
+        String location = ipLocationUtil.getIpLocation(clientIp);
+        user.setLastIpLocation(location);
         userRepository.save(user);
     }
 
     @Override
-    public LoginResponse login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request, HttpServletRequest httpRequest) {
         Optional<User> userOpt = userRepository.findByUsernameOrPhone(request.getUsername(), request.getUsername());
         LoginResponse response = new LoginResponse();
 
@@ -62,9 +75,16 @@ public class UserServiceImpl implements UserService {
             response.setMessage("用户名或密码错误");
             return response;
         }
+        System.out.println("httpResp:"+httpRequest);
 
-        // 生成真实token
-        String token = jwtTokenUtil.generateToken((UserDetails) user);
+        // 更新 IP 屬地
+        String clientIp = ipLocationUtil.getClientIp(httpRequest);
+        String location = ipLocationUtil.getIpLocation(clientIp);
+        user.setLastIpLocation(location);
+        userRepository.save(user);
+
+        // 生成 token
+        String token = jwtTokenUtil.generateToken(user);
 
         response.setCode(200);
         response.setMessage("登录成功");

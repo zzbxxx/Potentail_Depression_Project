@@ -1,9 +1,5 @@
 <template>
-  <div
-    class="overlay"
-    v-if="modelValue"
-    @click.self="close"
-  >
+  <div class="overlay" v-if="modelValue" @click.self="close">
     <div class="anno-hole">
       <div class="header">
         <h2>樹洞</h2>
@@ -19,7 +15,7 @@
           <el-select
             v-model="selectedTopic"
             multiple
-            placeholder="选择话题"
+            placeholder="選擇話題"
             class="custom-select"
             @change="handleTopicFilter"
           >
@@ -30,15 +26,14 @@
               :value="item"
             />
           </el-select>
-          <el-button type="danger" size="small" @click="close">关闭</el-button>
+          <el-button type="danger" size="small" @click="close">關閉</el-button>
         </div>
       </div>
 
-      <!-- 以下部分保持不变 -->
       <el-scrollbar height="calc(100% - 50px)">
         <div class="article-list">
           <el-card
-            v-for="article in articles"
+            v-for="article in filteredArticles"
             :key="article.id"
             shadow="hover"
             class="article-card"
@@ -47,7 +42,7 @@
 
             <div class="article-footer">
               <el-button text size="small" @click="openDetail(article)">
-                查看详情 &gt;
+                查看詳情 &gt;
               </el-button>
               <span class="time">{{ formatTime(article.createdAt) }}</span>
             </div>
@@ -58,18 +53,16 @@
                 like: true,
                 favorite: true,
                 share: true,
-                love: true,
                 more: true
               }"
               :gap="8"
-              @like="$emit('like', article)"
-              @favorite="$emit('favorite', article)"
-              @share="$emit('share', article)"
-              @love="$emit('love', article)"
-              @report="$emit('report', article)"
-              @dislikeArticle="$emit('dislikeArticle', article)"
-              @dislikeAuthor="$emit('dislikeAuthor', article)"
-              @toggleMenu="val => $emit('toggleMenu', article, val)"
+              @like="handleArticleLike"
+              @favorite="handleArticleFavorite"
+              @share="handleArticleShare"
+              @report="handleArticleReport"
+              @dislikeArticle="handleArticleDislike"
+              @dislikeAuthor="handleArticleDislikeAuthor"
+              @toggleMenu="val => handleToggleMenu(article, val)"
             />
           </el-card>
         </div>
@@ -79,149 +72,152 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, reactive, onBeforeUnmount, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import ActionBar from '/src/components/article/ActionBar.vue'
-import ArticleService from '../api/articleApi.js'
-import ArticlePreview from '/src/components/article/ArticlePreview.vue'
-const menuVisible = reactive({})
-const articles = ref([])
-const originalArticles = ref([])
-const searchQuery = ref('')
-const selectedTopic = ref([])
-const topicOptions = ref(["美食", "旅遊", "學習", "生活", "科技"])
+import { ref, watch, onMounted, reactive, onBeforeUnmount, computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import ActionBar from '/src/components/article/ActionBar.vue';
+import ArticleService from '../api/articleApi.js';
+import ArticlePreview from '/src/components/article/ArticlePreview.vue';
+
+const menuVisible = reactive({});
+const articles = ref([]);
+const originalArticles = ref([]);
+const searchQuery = ref('');
+const selectedTopic = ref([]);
+const topicOptions = ref(['美食', '旅遊', '學習', '生活', '科技']);
 
 const filteredArticles = computed(() => {
-  let result = [...originalArticles.value]
+  let result = [...originalArticles.value];
 
   if (selectedTopic.value.length > 0) {
     result = result.filter(article =>
       article.topics?.some(topic => selectedTopic.value.includes(topic))
-    )
+    );
   }
 
   if (searchQuery.value) {
-    const query = searchQuery.value.trim().toLowerCase()
+    const query = searchQuery.value.trim().toLowerCase();
     result = result.filter(article => {
-      const titleMatch = article.title?.toLowerCase().includes(query)
-      const previewMatch = firstTextBlock(article).toLowerCase().includes(query)
-      return titleMatch || previewMatch
-    })
+      const titleMatch = article.title?.toLowerCase().includes(query);
+      const previewMatch = firstTextBlock(article).toLowerCase().includes(query);
+      return titleMatch || previewMatch;
+    });
   }
 
-  return result
-})
+  return result;
+});
 
-const toggleMenu = (article, val) => {
-  const id = article.id
-  Object.keys(menuVisible).forEach(k => (menuVisible[k] = false))
-  menuVisible[id] = val
-}
+const handleToggleMenu = (article, val) => {
+  const id = article.id;
+  Object.keys(menuVisible).forEach(k => (menuVisible[k] = false));
+  menuVisible[id] = val;
+};
 
 const closeAllMenu = () => {
-  Object.keys(menuVisible).forEach(k => (menuVisible[k] = false))
-}
-onMounted(() => document.addEventListener('click', closeAllMenu))
-onBeforeUnmount(() => document.removeEventListener('click', closeAllMenu))
+  Object.keys(menuVisible).forEach(k => (menuVisible[k] = false));
+};
 
-const report = (article) => {
-  ElMessage.warning(`已举报文章 ${article.id}`)
-}
-const dislikeArticle = (article) => {
-  ElMessage.info(`将减少类似文章 ${article.id} 的推荐`)
-}
-const dislikeAuthor = (article) => {
-  ElMessage.info(`将减少作者 ${article.nickname || '匿名'} 的内容`)
-}
+onMounted(() => document.addEventListener('click', closeAllMenu));
+onBeforeUnmount(() => document.removeEventListener('click', closeAllMenu));
+
+const handleArticleReport = (article) => {
+  ElMessage.warning(`已舉報文章 ${article.id}`);
+};
+
+const handleArticleDislike = (article) => {
+  ElMessage.info(`將減少類似文章 ${article.id} 的推薦`);
+};
+
+const handleArticleDislikeAuthor = (article) => {
+  ElMessage.info(`將減少作者 ${article.nickname || '匿名'} 的內容`);
+};
 
 async function getInfo() {
   try {
-    const res = await ArticleService.getApprovedArticles()
+    const res = await ArticleService.getApprovedArticles();
     originalArticles.value = res.map(a => ({
       ...a,
-      likes: 0,
-      loves: 0,
-      liked: false
-    }))
-    articles.value = [...originalArticles.value]
+      likes: a.likes || 0,
+      liked: a.liked || false
+    }));
+    articles.value = [...originalArticles.value];
   } catch (e) {
-    ElMessage.error('获取文章失败')
+    ElMessage.error('獲取文章失敗');
   }
 }
 
 function handleArticleSearch() {
-  // 搜索逻辑已移到computed中，通过searchQuery触发
+  // 搜索邏輯已移到 computed 中
 }
 
 function handleTopicFilter() {
-  // 过滤逻辑已移到computed中，通过selectedTopic触发
+  // 過濾邏輯已移到 computed 中
 }
 
 function resetFilters() {
-  searchQuery.value = ''
-  selectedTopic.value = []
-  articles.value = [...originalArticles.value]
+  searchQuery.value = '';
+  selectedTopic.value = [];
+  articles.value = [...originalArticles.value];
 }
 
+const handleArticleLike = (updatedArticle) => {
+  const index = articles.value.findIndex(a => a.id === updatedArticle.id);
+  if (index !== -1) {
+    articles.value[index].liked = updatedArticle.liked;
+    articles.value[index].likes = updatedArticle.likes;
+  }
+  const originalIndex = originalArticles.value.findIndex(a => a.id === updatedArticle.id);
+  if (originalIndex !== -1) {
+    originalArticles.value[originalIndex].liked = updatedArticle.liked;
+    originalArticles.value[originalIndex].likes = updatedArticle.likes;
+  }
+};
+
+// const handleArticleFavorite = (article) => {
+//   ElMessage.info(`收藏文章 ${article.id}`);
+// };
+
+const handleArticleShare = (article) => {
+  ElMessage.success(`分享文章 ${article.id}`);
+};
+
 onMounted(() => {
-  getInfo()
-})
+  getInfo();
+});
 
 const props = defineProps({
   modelValue: {
     type: Boolean,
     default: false
   }
-})
+});
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue']);
 
 watch(() => props.modelValue, (newVal) => {
-  console.log('AnnoHole 显示状态:', newVal)
-})
+  console.log('AnnoHole 顯示狀態:', newVal);
+});
 
 const close = () => {
-  emit('update:modelValue', false)
-}
-const router = useRouter()
-const openDetail = (article) => {
-  console.log(article);
-  
-  router.push({ name: 'DetailPage', params: { id: article.id } })
-  ElMessage.info(`跳转到文章 ${article.id} 的详情页`)
-}
+  emit('update:modelValue', false);
+};
 
-const like = (article) => {
-  if (!article.liked) {
-    article.likes++
-    article.liked = true
-  } else {
-    article.likes--
-    article.liked = false
-  }
-}
-const love = (article) => {
-  article.loves++
-}
-const share = (article) => {}
-const favorite = (article) => {}
+const router = useRouter();
+const openDetail = (article) => {
+  router.push({ name: 'DetailPage', params: { id: article.id } });
+  ElMessage.info(`跳轉到文章 ${article.id} 的詳情頁`);
+};
 
 const firstTextBlock = (article) => {
-  const block = article.blocks?.find(b => b.type === 'text')
-  if (!block) return ''
-  const plain = block.content.replace(/<[^>]+>/g, '')
-  return plain.slice(0, 50) + (plain.length > 50 ? '...' : '')
-}
-
-const firstImageBlock = (article) => {
-  const block = article.blocks?.find(b => b.type === 'image')
-  return block?.content || ''
-}
+  const block = article.blocks?.find(b => b.type === 'text');
+  if (!block) return '';
+  const plain = block.content.replace(/<[^>]+>/g, '');
+  return plain.slice(0, 50) + (plain.length > 50 ? '...' : '');
+};
 
 const formatTime = (t) => {
-  return new Date(t).toLocaleString()
-}
+  return new Date(t).toLocaleString();
+};
 </script>
 
 <style scoped>
@@ -260,30 +256,6 @@ const formatTime = (t) => {
 .article-card {
   border-radius: 8px;
 }
-.article-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.article-title {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 8px;
-}
-.article-preview {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.preview-text {
-  font-size: 14px;
-  color: #444;
-}
-.preview-img {
-  max-height: 200px;
-  border-radius: 4px;
-}
 .article-footer {
   display: flex;
   justify-content: space-between;
@@ -308,9 +280,6 @@ const formatTime = (t) => {
     width: 100%;
     height: 100vh;
     border-radius: 0;
-  }
-  .article-title {
-    font-size: 16px;
   }
   .custom-select {
     width: 8rem;

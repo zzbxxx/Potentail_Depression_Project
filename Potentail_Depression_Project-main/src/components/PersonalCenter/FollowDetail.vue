@@ -7,7 +7,7 @@
         <el-table-column label="頭像" width="80">
           <template #default="scope">
             <img
-              :src="scope.row.avatar || '/src/assets/image/default-avatar.png'"
+              :src="scope.row.avatar || '/src/assets/image/FT.jpg'"
               alt="用戶頭像"
               class="avatar"
               @click="handleUserClick(scope.row.id)"
@@ -48,7 +48,7 @@
         <el-table-column label="頭像" width="80">
           <template #default="scope">
             <img
-              :src="scope.row.avatar || '/src/assets/image/default-avatar.png'"
+              :src="scope.row.avatar || '/src/assets/image/FT.jpg'"
               alt="用戶頭像"
               class="avatar"
               @click="handleUserClick(scope.row.id)"
@@ -168,8 +168,6 @@ const handleFollow = async (id) => {
 // 處理發送信息
 const handleSendMessage = (id) => {
   ElMessage.info(`正在向用戶 ID: ${id} 發送信息`);
-  // TODO: 實現發送信息的邏輯，例如跳轉到聊天頁面或調用發送消息的 API
-  // router.push(`/chat/${id}`);
 };
 
 // 處理頭像點擊，跳轉到用戶詳情頁面
@@ -245,7 +243,7 @@ h3 {
   }
 
   .button-group {
-    gap: 8px; /* 小屏幕上減少間距 */
+    gap: 8px; 
   }
 
   .button-group .el-button {

@@ -7,7 +7,20 @@
       class="notification-table"
       :header-cell-style="{ background: '#e6f0fa', color: '#2C3E50' }"
       :loading="loading"
+      max-height="400"
     >
+    <el-table-column prop="triggerUsername" label="对象" width="150">
+        <template #default="{ row }">
+          <span
+            v-if="row.triggerUsername"
+            class="trigger-username"
+            @click="openDetail(row)"
+          >
+            {{ row.triggerUsername }}
+          </span>
+          <span v-else>系统</span>
+        </template>
+      </el-table-column>
       <el-table-column prop="title" label="通知标题" width="200">
         <template #default="{ row }">
           {{ row.title }}
@@ -55,7 +68,9 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { ElMessage } from 'element-plus';
 import { useNotificationStore } from '/src/stores/notification';
 import NotificationService from '/src/api/notificationApi';
+import { useRouter } from 'vue-router';
 
+const router = useRouter();
 const notificationStore = useNotificationStore();
 const props = defineProps({
   userId: Number,
@@ -95,6 +110,12 @@ const handleSizeChange = (val) => {
 
 const handleCurrentChange = (val) => {
   currentPage.value = val;
+};
+
+const openDetail = (row) => {
+  if (row.triggerUserId) {
+    router.push({ name: 'UserDetailPage', params: { id: row.triggerUserId } });
+  }
 };
 
 const loadNotifications = async () => {
@@ -158,16 +179,39 @@ watch(() => notificationStore.unreadCount, (newCount) => {
 </script>
 
 <style scoped>
-.notification-panel { padding: 1rem; }
+.notification-panel {
+  padding: 1rem;
+}
 .notification-table {
   background-color: #f9fbfd;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-bottom: 1.5rem;
 }
-.unread { color: #f56c6c; font-weight: bold; }
-.pagination { display: flex; justify-content: center; }
+.unread {
+  color: #f56c6c;
+  font-weight: bold;
+}
+.pagination {
+  display: flex;
+  justify-content: center;
+}
+.trigger-username {
+  color: #409EFF;
+  cursor: pointer;
+}
+.trigger-username:hover {
+  text-decoration: underline;
+}
 @media (prefers-color-scheme: dark) {
-  .notification-table { background-color: #2c3e50; }
+  .notification-table {
+    background-color: #2c3e50;
+  }
+  .trigger-username {
+    color: #79BBFF;
+  }
+}
+.notification-table .el-table__body-wrapper {
+  overflow-y: auto;
 }
 </style>

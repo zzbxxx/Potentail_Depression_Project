@@ -4,11 +4,13 @@ import com.example.depressive.login.entity.User;
 import com.example.depressive.login.repository.UserRepository;
 import com.example.depressive.personalCenter.UserMessageRepository.UserMessageRepository;
 import com.example.depressive.personalCenter.dto.PersonalResp;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-
+import com.example.depressive.util.IpLocationUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.Map;
 @RestController
@@ -30,18 +32,25 @@ public class UserMessageController {
         resp.setAvatar(user.getAvatar());
         resp.setEmail(user.getEmail());
         resp.setId(userId);
-        // 3. 返回
+        resp.setLastIpLocation(user.getLastIpLocation());
+        resp.setBio(user.getBio());
         return ResponseEntity.ok(resp);
     }
 
+
+
     @PutMapping("/profile")
-    public ResponseEntity<Map<String, Object>> updateProfile(@RequestParam String userId, @RequestBody User updatedUser) {
+    public ResponseEntity<Map<String, Object>> updateProfile(
+            @RequestParam String userId,
+            @RequestBody User updatedUser,
+            HttpServletRequest request) {
         Map<String, Object> response = new HashMap<>();
         try {
             Long id = Long.parseLong(userId);
             User user = userRepository.findById(id)
                     .orElseThrow(() -> new RuntimeException("用户不存在"));
 
+            System.out.println("update:"+updatedUser.getBio());
             if (updatedUser.getNickname() != null && !updatedUser.getNickname().isEmpty()) {
                 user.setNickname(updatedUser.getNickname());
             }
@@ -51,6 +60,10 @@ public class UserMessageController {
             if (updatedUser.getAvatar() != null) {
                 user.setAvatar(updatedUser.getAvatar());
             }
+            if (updatedUser.getBio() != null){
+                user.setBio(updatedUser.getBio());
+            }
+
 
             userRepository.save(user);
             response.put("success", true);

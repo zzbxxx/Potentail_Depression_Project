@@ -72,6 +72,11 @@
 			<version>1.18.34</version> <!-- 使用最新穩定版本 -->
 			<scope>provided</scope>
 		</dependency>
+		<dependency>
+			<groupId>com.maxmind.geoip2</groupId>
+			<artifactId>geoip2</artifactId>
+			<version>4.1.0</version> <!-- 最新版本，依 2025 年更新 -->
+		</dependency>
 <!--		<dependency>-->
 <!--			<groupId>org.projectlombok</groupId>-->
 <!--			<artifactId>lombok</artifactId>-->

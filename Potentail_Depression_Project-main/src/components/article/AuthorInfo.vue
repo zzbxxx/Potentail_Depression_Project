@@ -1,6 +1,9 @@
 <template>
   <div class="author-info">
-    <el-avatar :size="40" :src="author.avatar || defaultAvatar" />
+    <el-avatar :size="40" 
+    :src="author.avatar || defaultAvatar"
+    @click="handleUserClick(author.authorId)"
+    />
     <div class="author-details">
       <span class="nickname">{{ author.nickname || '匿名' }}</span>
       <span class="created-at">{{ formatDate(author.createdAt) }}</span>
@@ -23,7 +26,8 @@ import { onMounted, ref } from 'vue';
 import FollowService from '/src/api/followApi'
 import { ca } from 'element-plus/es/locales.mjs';
 import { debounce } from 'lodash';
-
+import { useRouter } from 'vue-router';
+const router = useRouter();
 const props = defineProps({
   author: {
     type: Object,
@@ -53,6 +57,10 @@ const formatDate = (dateString) => {
     minute: '2-digit'
   });
 };
+
+const handleUserClick = (authorId) => {
+  router.push(`/userDetail/${authorId}`);
+}
 
 const checkFollow = async () => {
   if (!userId.value) return;

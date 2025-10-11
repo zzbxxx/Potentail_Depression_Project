@@ -12,4 +12,8 @@ public class PersonalResp {
     private String email;
 
     private long id;
+
+    private String bio;
+
+    private String lastIpLocation;
 }
