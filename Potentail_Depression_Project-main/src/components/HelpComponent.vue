@@ -24,14 +24,13 @@
     
     <el-dialog
       v-model="showEmergencyDialogVisible"
-      title="紧急帮助"
       width="90%"
       :close-on-click-modal="true"
     >
       <div class="emergency-dialog-content">
         <p>您需要哪种紧急帮助？</p>
         <div class="emergency-actions">
-          <el-button type="primary" @click="callEmergency">
+          <el-button type="danger" @click="callEmergency">
             <el-icon><Phone /></el-icon>
             拨打紧急电话
           </el-button>
@@ -121,7 +120,7 @@ const sendEmergencyAlert = async () => {
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: 21000;
+  z-index: 1200;
   width: 12rem;
   background-color: aliceblue;
   border-radius: 12px;
@@ -129,7 +128,6 @@ const sendEmergencyAlert = async () => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* 温和的帮助按钮 */
 .gentle-help-btn {
   display: flex;
   align-items: center;
@@ -190,6 +188,8 @@ const sendEmergencyAlert = async () => {
 .emergency-dialog-content {
   text-align: center;
   padding: 20px;
+  background-color: rgb(255, 247, 236);
+  border-radius: 20px;
 }
 
 .emergency-actions {

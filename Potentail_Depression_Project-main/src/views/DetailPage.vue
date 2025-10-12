@@ -91,9 +91,6 @@ const handleArticleLike = (updatedArticle) => {
   article.value.likes = updatedArticle.likes;
 };
 
-// const handleArticleFavorite = (article) => {
-//   ElMessage.info(`收藏文章 ${article.id}`);
-// };
 
 const handleArticleShare = (article) => {
   ElMessage.success(`分享文章 ${article.id}`);

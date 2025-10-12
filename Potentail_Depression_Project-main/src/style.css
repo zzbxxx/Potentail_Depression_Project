@@ -3,6 +3,10 @@
     margin-top: 4%;
 }
 
+.el-select {
+    z-index: 99999;
+}
+
 .editor-container {
     background-color: #F5F5F5;
     padding: 20px;

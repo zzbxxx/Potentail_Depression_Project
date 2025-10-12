@@ -228,7 +228,7 @@ const formatTime = (t) => {
   display: grid;
   place-items: center;
   padding: 16px;
-  z-index: 23000;
+  z-index: 2000;
 }
 .anno-hole {
   background-color: #fff;

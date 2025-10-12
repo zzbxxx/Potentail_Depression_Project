@@ -13,51 +13,46 @@
       </el-button>
     </div>
 
-      <el-button 
-        type="primary" 
-        class="deep-sea-action-btn"
-        @click="goToDateLog"
-        :icon="Clock " 
-      >
-        <span>
-          时间日志
-        </span>
-      </el-button>
+    <el-button 
+      type="primary" 
+      class="deep-sea-action-btn"
+      @click="goToDateLog"
+      :icon="Clock" 
+    >
+      <span>时间日志</span>
+    </el-button>
 
-      <el-button 
-        type="primary" 
-        class="personal-btn"
-        @click="goToEmail"
-        :icon="Clock " 
-      >
-        <span>
-          个人信息
-        </span>
-      </el-button>
+    <el-button 
+      type="primary" 
+      class="personal-btn"
+      @click="goToEmail"
+      :icon="Clock" 
+    >
+      <span>个人信息</span>
+    </el-button>
 
-      <el-button 
-        type="primary" 
-        class="editor-btn"
-        @click="gotoEditor"
-        :icon="Clock " 
-      >
-        <span>
-          編輯文章
-        </span>
-      </el-button>
+    <el-button 
+      type="primary" 
+      class="editor-btn"
+      @click="gotoEditor"
+      :icon="Clock" 
+    >
+      <span>编辑文章</span>
+    </el-button>
 
-      <el-button
-          type="primary"
-          class="audit-bth"
-          @click="gotoAudit"
-          :icon="Clock"
-        >
-        <span>管理中心</span>
-      </el-button>
+    <el-button
+      type="primary"
+      class="audit-bth"
+      @click="gotoAudit"
+      :icon="Clock"
+    >
+      <span>管理中心</span>
+    </el-button>
+
     <RecoveryCode
       v-model="showRecoveryCode" 
       :button-ref="buttonElement"
-     />
+    />
 
     <el-button 
       class="home-btn" 
@@ -67,48 +62,63 @@
     >
       首页
     </el-button>
-  </div>
 
-  <CardGallery3D 
-    :cards="[
-      { id: 'today', title: '今日卡片', imageUrl: todayCardImage },
-      { id: 'anon', title: '匿名树洞', imageUrl: anonCardImage },
-      { id: 'progress', title: '小小进展', imageUrl: progressCardImage }
-    ]"
-    width="100%"
-    height="300px"
-    :responsive="true"
-    @select="handleCardSelect"
-  />
+    <CardGallery3D 
+      :cards="[
+        { id: 'today', title: '今日卡片', imageUrl: todayCardImage },
+        { id: 'anon', title: '匿名树洞', imageUrl: anonCardImage },
+        { id: 'progress', title: '小小进展', imageUrl: progressCardImage }
+      ]"
+      width="100%"
+      height="300px"
+      :responsive="true"
+      @select="handleCardSelect"
+    />
 
-  <card-popup
-    v-model="show"
-    @open="onOpen"
-    @close="onClose"
-  />
+    <card-popup
+      v-model="show"
+      @open="onOpen"
+      @close="onClose"
+    />
 
-  <AnnoHole
-    v-model="annoShow"
-  />
+    <AnnoHole
+      v-model="annoShow"
+    />
 
-  <div style="background-color: aliceblue; ">
-    <HelpComponent />
+    <StudyRoom
+      v-model="studyRoomShow"
+      :rooms="rooms"
+      @select-room="handleRoomSelect"
+      @create-room="handleCreateRoom"
+    />
+
+    <CreateStudyRoom
+      v-model="createRoomShow"
+      @create-room="addNewRoom"
+      @update:modelValue="handleCreateRoomCancel"
+    />
+
+    <div style="background-color: aliceblue;">
+      <HelpComponent />
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ArrowLeft, Edit ,Clock  } from '@element-plus/icons-vue'
-import { onMounted, watch, nextTick, ref,reactive } from 'vue'
+import { ArrowLeft, Edit, Clock } from '@element-plus/icons-vue'
+import { onMounted, watch, nextTick, ref } from 'vue'
 import RecoveryCode from '../components/RecoveryCode.vue'
 import HelpComponent from '../components/HelpComponent.vue'
 import CardGallery3D from '../components/CardGallery3D.vue'
 import CardPopup from '../components/CardPopup.vue'
-import { useRouter } from 'vue-router'
-import MoodApiService from '../api/moodApi.js'
 import AnnoHole from '../components/AnnoHole.vue'
+import StudyRoom from '../components/StudyRoom.vue'
+import CreateStudyRoom from '../components/CreateStudyRoom.vue'
+import { useRouter } from 'vue-router'
 import todayCardImage from '../assets/image/today-card.jpg'
 import anonCardImage from '../assets/image/anon-card.jpg'
 import progressCardImage from '../assets/image/progress-card.jpg'
+
 const showRecoveryCode = ref(false)
 const buttonRef = ref(null)
 const buttonElement = ref(null)
@@ -116,54 +126,129 @@ const clickCount = ref(0)
 const show = ref(false)
 const isAccountLogin = ref(true)
 const annoShow = ref(false)
+const studyRoomShow = ref(false)
+const createRoomShow = ref(false)
+const router = useRouter()
+
+const rooms = ref([
+  { 
+    id: 1, 
+    name: '专注学习室1', 
+    type: '嚴格番茄鐘', 
+    tags: ['數學', '科學'], 
+    currentUsers: 5, 
+    maxUsers: 6, 
+    creatorId: 1001, 
+    status: '进行中', 
+    createdAt: '2025-10-12T10:00:00', 
+    avatar: new URL('../assets/image/avatar2.jpg', import.meta.url).href
+  },
+  { 
+    id: 2, 
+    name: '深夜自习室', 
+    type: '自由計時', 
+    tags: ['繪畫', '文學'], 
+    currentUsers: 3, 
+    maxUsers: 6, 
+    creatorId: 1002, 
+    status: '进行中', 
+    createdAt: '2025-10-12T22:00:00', 
+    avatar: new URL('../assets/image/avatar3.jpg', import.meta.url).href
+  },
+  { 
+    id: 3, 
+    name: '早起学习室', 
+    type: '互助房', 
+    tags: ['哲學', '歷史'], 
+    currentUsers: 6, 
+    maxUsers: 6, 
+    creatorId: 1003, 
+    status: '进行中', 
+    createdAt: '2025-10-12T06:00:00', 
+    avatar: new URL('../assets/image/avatar3.jpg', import.meta.url).href
+  },
+  { 
+    id: 4, 
+    name: '编程冲刺室', 
+    type: '編程學習', 
+    tags: ['編程學習', '科學'], 
+    currentUsers: 4, 
+    maxUsers: 6, 
+    creatorId: 1004, 
+    status: '进行中', 
+    createdAt: '2025-10-12T15:00:00', 
+    avatar: new URL('../assets/image/avatar2.jpg', import.meta.url).href
+  },
+])
+
 const goToHome = () => {
   window.location.href = '/'
 }
 
-function gotoEditor(){
+function gotoEditor() {
   router.push('/editor')
 }
 
-const router = useRouter()
 async function goToDateLog() {
   router.push('/mood-log')
 }
-async function goToEmail(){
+
+async function goToEmail() {
   router.push('/personal-center')
 }
-async function gotoAudit(){
+
+async function gotoAudit() {
   router.push('/admin-control')
 }
 
-
 const getButtonElement = async () => {
   if (!buttonRef.value) return null
-  
   await nextTick()
-
   return buttonRef.value.$el || buttonRef.value
 }
 
 function handleCardSelect(card, index) {
   if (card.id === 'today') {
-    // 打开今日卡片
     clickCount.value++
     if (clickCount.value === 2) {
       show.value = true
       clickCount.value = 0
     }
   } else if (card.id === 'anon') {
-    // 打开树洞
-    console.log(11);
-    
-     clickCount.value++
+    clickCount.value++
     if (clickCount.value === 2) {
       annoShow.value = true
       clickCount.value = 0
     }
   } else if (card.id === 'progress') {
-    // 打开进展
+    clickCount.value++
+    if (clickCount.value === 2) {
+      studyRoomShow.value = true
+      clickCount.value = 0
+    }
   }
+}
+
+function handleRoomSelect(room) {
+  console.log(`加入自習室: ${room.name}`)
+}
+
+function handleCreateRoom() {
+  studyRoomShow.value = false
+  createRoomShow.value = true
+}
+
+function handleCreateRoomCancel(value) {
+  createRoomShow.value = value
+  if (!value) {
+    studyRoomShow.value = true // 取消時返回 StudyRoom
+  }
+}
+
+function addNewRoom(newRoom) {
+  rooms.value.push(newRoom)
+  createRoomShow.value = false
+  studyRoomShow.value = true // 創建後返回 StudyRoom
 }
 
 watch([showRecoveryCode, buttonRef], async ([newShowVal, newButtonVal]) => {
@@ -172,15 +257,13 @@ watch([showRecoveryCode, buttonRef], async ([newShowVal, newButtonVal]) => {
   }
 })
 
-// 组件挂载后获取按钮元素
 onMounted(async () => {
   const user_id = localStorage.getItem("user_id")
-  if(user_id){
+  if (user_id) {
     isAccountLogin.value = false
   }
-  
   await nextTick()
-  buttonElement.value = await getButtonElement();
+  buttonElement.value = await getButtonElement()
 })
 
 const toggleRecoveryCode = () => {
@@ -200,7 +283,6 @@ const toggleRecoveryCode = () => {
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #e6f0fa 0%, #f5e6e8 100%);
-
   background-size: auto, 100px 100px;
   background-attachment: fixed;
   transition: all 0.5s ease;
@@ -215,33 +297,11 @@ const toggleRecoveryCode = () => {
   left: 20px;
   z-index: 1000;
 }
-.personal-btn{
+
+.personal-btn, .editor-btn, .audit-bth {
   position: fixed;
   right: 2rem;
-  top: 4rem;
-  z-index: 21000;
-  width: 6rem;
-  background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #e0f2fe;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-.editor-btn{
-  position: fixed;
-  right: 2rem;
-  top: 8rem;
-  z-index: 21000;
-  width: 6rem;
-  background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #e0f2fe;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-.audit-bth{
-  position: fixed;
-  right: 2rem;
-  top: 12rem;
-  z-index: 21000;
+  z-index: 1000;
   width: 6rem;
   background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -249,10 +309,15 @@ const toggleRecoveryCode = () => {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-.personal-btn:hover {
+.personal-btn { top: 4rem; }
+.editor-btn { top: 8rem; }
+.audit-bth { top: 12rem; }
+
+.personal-btn:hover, .editor-btn:hover, .audit-bth:hover {
   background: linear-gradient(135deg, #0d2b4e 0%, #1a5f9c 100%);
   transform: translateY(-2px);
 }
+
 .deep-sea-btn {
   background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -274,18 +339,18 @@ const toggleRecoveryCode = () => {
 }
 
 .home-btn {
-    background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #e0f2fe;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-    padding: 10px 20px;
-    border-radius: 6px;
-    font-size: 14px;
-    position: fixed;
-    bottom: 20px;
-    left: 20px;
-    font-weight: 500;
+  background: linear-gradient(135deg, #1a5f9c 0%, #0d2b4e 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e0f2fe;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  font-weight: 500;
 }
 
 .home-btn:hover {
@@ -293,7 +358,6 @@ const toggleRecoveryCode = () => {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* 暗色模式适配 */
 @media (prefers-color-scheme: dark) {
   .MainPage {
     background: linear-gradient(135deg,
