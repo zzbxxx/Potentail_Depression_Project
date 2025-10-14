@@ -26,9 +26,13 @@
             />
           </el-select>
           <el-button type="primary" @click="createRoom">創建自習室</el-button>
+          <!-- 僅當用戶在房間中顯示「進入房間」按鈕 -->
+          <el-button type="warning" v-if="isInRoom" @click="showMyRoom">進入房間</el-button>
           <el-button type="danger" size="small" @click="close">關閉</el-button>
         </div>
       </div>
+    
+      <p v-if="filteredRooms.length === 0" class="nullTip">還沒有自習室喔！！</p>
 
       <el-scrollbar height="calc(100% - 50px)">
         <div class="room-list">
@@ -39,12 +43,12 @@
             class="room-card"
             @click="openDialog(room)"
           >
-            <div class="room-info">
-              <div class="room-header">
+            <div class="room-info">    
+              <div class="-room-header">
                 <img 
                   :src="room.avatar" 
                   class="room-avatar" 
-                  alt="創建者頭像" 
+                  alt="房間頭像" 
                   @error="handleImageError($event, room.id)"
                 />
                 <div>
@@ -53,7 +57,7 @@
                 </div>
               </div>
               <p>人數: {{ room.currentUsers }}/{{ room.maxUsers }}</p>
-              <p>創建者: 匿名用戶{{ room.creatorId }}</p>
+              <p>創建者: {{ room.creatorNickname || `匿名用戶${room.creatorId}` }}</p>
               <p>狀態: {{ room.status }}</p>
               <p>類型: {{ room.type }}</p>
               <p>標簽: {{ room.tags.length ? room.tags.join(', ') : '無' }}</p>
@@ -74,7 +78,7 @@
           確定要加入自習室 "{{ selectedRoomForJoin?.name }}" 嗎？
         </div>
         <div class="custom-dialog-footer">
-          <button class="confirm-btn" @click="confirmJoin">確定</button>
+          <button class="confirm-btn" @click="debounceConfirmJoin">確定</button>
           <button class="cancel-btn" @click="closeDialog">取消</button>
         </div>
       </div>
@@ -83,13 +87,20 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+import RoomService from '/src/api/roomApi.js'
+import SockJS from 'sockjs-client'
+import { Stomp } from '@stomp/stompjs'
+import { debounce } from 'lodash'
 
+const router = useRouter()
 const props = defineProps({
   modelValue: Boolean,
   rooms: Array
 })
-
+const subscribedRooms = ref(new Set())
 const emit = defineEmits(['update:modelValue', 'select-room', 'create-room'])
 
 const searchQuery = ref('')
@@ -97,8 +108,35 @@ const selectedType = ref('')
 const selectedTag = ref('')
 const typeOptions = ref(['嚴格番茄鐘', '自由計時', '互助房', '編程學習'])
 const tagOptions = ref(['數學', '繪畫', '哲學', '文學', '歷史', '科學'])
+const userId = localStorage.getItem('userId') || localStorage.getItem('user_id')
+const isInRoom = ref(false)
+let stompClient = null
+
+const typeMap = {
+  'strict_tomato': '嚴格番茄鐘',
+  'free_time': '自由計時',
+  'mutual_aid': '互助房',
+  'programming': '編程學習'
+}
+
+const topicMap = {
+  'Math': '數學',
+  'Physics': '科學',
+  'Painting': '繪畫',
+  'Philosophy': '哲學',
+  'Literature': '文學',
+  'History': '歷史'
+}
+
 const showDialog = ref(false)
 const selectedRoomForJoin = ref(null)
+
+const handleAvatar = (avatar) => {
+  if (avatar && typeof avatar === 'string' && avatar.trim() !== '') {
+    return new URL(`/src/assets/image/${avatar}.jpg`, import.meta.url).href
+  }
+  return new URL('/src/assets/image/default-avatar.png', import.meta.url).href
+}
 
 const filteredRooms = computed(() => {
   let result = props.rooms
@@ -116,17 +154,100 @@ const filteredRooms = computed(() => {
   return result
 })
 
-function openDialog(room) {
-  selectedRoomForJoin.value = room
-  showDialog.value = true
+// 檢查用戶是否在房間中
+async function checkIfInRoom() {
+  if (!userId) {
+    isInRoom.value = false
+    return
+  }
+  try {
+    const res = await RoomService.getMyRoom(userId)
+    isInRoom.value = res.success && !!res.data
+  } catch (e) {
+    console.error('檢查房間狀態失敗:', e)
+    isInRoom.value = false
+  }
 }
 
-function confirmJoin() {
-  if (selectedRoomForJoin.value) {
+async function fetchRooms() {
+  try {
+    const res = await RoomService.getActiveRooms()
+    if (!res.data || !Array.isArray(res.data)) {
+      throw new Error('接口返回數據格式不正確')
+    }
+    const formattedRooms = res.data.map(room => ({
+      ...room,
+      type: typeMap[room.type] || room.type,
+      tags: room.topics.map(topic => topicMap[topic] || topic),
+      avatar: handleAvatar(room.avatar || room.creatorAvatar)
+    }))
+    props.rooms.splice(0, props.rooms.length, ...formattedRooms)
+    await checkIfInRoom()
+  } catch (e) {
+    console.error('獲取自習室數據失敗:', e)
+    ElMessage.error('獲取自習室數據失敗')
+  }
+}
+
+async function openDialog(room) {
+  selectedRoomForJoin.value = room
+  try {
+    const res = await RoomService.getCurrentRoom(userId)
+    if (res.success && res.data && res.data.id === room.id) {
+      router.push({ name: 'StudyRoomPage', params: { id: room.id } })
+      emit('select-room', room)
+    } else if (res.success && res.data) {
+      ElMessage.warning(`您已在房間 "${res.data.name}" 中，請先退出再加入其他房間`)
+    } else {
+      showDialog.value = true
+    }
+  } catch (e) {
+    console.error('檢查當前房間失敗:', e)
+    ElMessage.error('檢查房間狀態失敗: ' + e.message)
+    showDialog.value = true
+  }
+}
+
+async function confirmJoin() {
+  if (!selectedRoomForJoin.value || !userId) {
+    ElMessage.error('用戶未登錄或無效的房間')
+    closeDialog()
+    return
+  }
+
+  try {
+    const res = await RoomService.joinRoom(selectedRoomForJoin.value.id, userId)
+    if (!res.success) {
+      if (res.message.includes('房間已滿')) {
+        ElMessage.warning('房間已滿，無法加入！')
+      } else if (res.message.includes('用戶已在房間')) {
+        const currentRoomRes = await RoomService.getCurrentRoom(userId)
+        if (currentRoomRes.success && currentRoomRes.data.id === selectedRoomForJoin.value.id) {
+          router.push({ name: 'StudyRoomPage', params: { id: selectedRoomForJoin.value.id } })
+          emit('select-room', selectedRoomForJoin.value)
+        } else {
+          ElMessage.warning(res.message)
+        }
+      } else {
+        ElMessage.error('加入自習室失敗: ' + res.message)
+      }
+      return
+    }
+    router.push({ name: 'StudyRoomPage', params: { id: selectedRoomForJoin.value.id } })
     emit('select-room', selectedRoomForJoin.value)
+    isInRoom.value = true
+  } catch (e) {
+    console.error('加入自習室失敗:', e)
+    if (e.message.includes('房間已滿')) {
+      ElMessage.warning('房間已滿，無法加入！')
+    } else {
+      ElMessage.error('加入自習室失敗: ' + e.message)
+    }
   }
   closeDialog()
 }
+
+const debounceConfirmJoin = debounce(confirmJoin, 200)
 
 function closeDialog() {
   showDialog.value = false
@@ -158,15 +279,131 @@ const formatTime = (t) => {
 }
 
 function handleImageError(event, roomId) {
-  event.target.src = new URL('../assets/images/default-avatar.png', import.meta.url).href
+  event.target.src = new URL('/src/assets/images/default-avatar.png', import.meta.url).href
 }
+
+async function showMyRoom() {
+  if (!userId) {
+    ElMessage.error('請先登錄')
+    return
+  }
+
+  try {
+    const res = await RoomService.getMyRoom(userId)
+    if (res.success) {
+      if (res.data) {
+        const formattedRoom = {
+          ...res.data,
+          type: typeMap[res.data.type] || res.data.type,
+          tags: res.data.topics.map(topic => topicMap[topic] || topic),
+          avatar: handleAvatar(res.data.avatar || res.data.creatorAvatar)
+        }
+        router.push({ name: 'StudyRoomPage', params: { id: formattedRoom.id } })
+        emit('select-room', formattedRoom)
+        ElMessage.success(`已進入您的房間: ${formattedRoom.name}`)
+      } else {
+        ElMessage.info(res.message || '您目前不在任何自習室中')
+        isInRoom.value = false
+      }
+    } else {
+      ElMessage.error(res.message || '查詢我的房間失敗')
+    }
+  } catch (e) {
+    console.error('查詢我的房間失敗:', e)
+    ElMessage.error('查詢我的房間失敗: ' + e.message)
+  }
+}
+
+function connectWebSocket() {
+  const socket = new SockJS('http://localhost:8080/ws')
+  stompClient = Stomp.over(socket)
+  stompClient.connect({}, () => {
+    // 訂閱新房間創建事件
+    stompClient.subscribe('/topic/rooms', (message) => {
+      const newRoom = JSON.parse(message.body)
+      const formattedRoom = {
+        ...newRoom,
+        type: typeMap[newRoom.type] || newRoom.type,
+        tags: newRoom.topics.map(topic => topicMap[topic] || topic),
+        avatar: handleAvatar(newRoom.avatar || newRoom.creatorAvatar)
+      }
+      if (!props.rooms.some(room => room.id === formattedRoom.id)) {
+        props.rooms.push(formattedRoom)
+        ElMessage.success(`新房間 "${formattedRoom.name}" 已創建`)
+      }
+      if (userId && newRoom.creatorId === parseInt(userId)) {
+        isInRoom.value = true
+      }
+    })
+
+    // 初始訂閱當前房間列表的 topic
+    subscribeToAllRooms()
+  }, (error) => {
+    console.error('WebSocket 連接失敗:', error)
+    ElMessage.error('無法連接到實時更新服務')
+  })
+}
+
+// 新增：訂閱所有房間的 topic
+function subscribeToAllRooms() {
+  props.rooms.forEach(room => {
+    const topic = `/topic/room/${room.id}`
+    if (!subscribedRooms.value.has(room.id)) {
+      stompClient.subscribe(topic, (message) => {
+        const body = message.body
+        const roomId = parseInt(message.headers.destination.split('/').pop())
+        const targetRoom = props.rooms.find(r => r.id === roomId)
+        if (targetRoom) {
+          if (body === 'closed') {
+            props.rooms.splice(props.rooms.indexOf(targetRoom), 1)
+            unsubscribeFromRoom(roomId) // 取消訂閱已關閉房間
+            if (userId) {
+              checkIfInRoom()
+            }
+          } else {
+            targetRoom.currentUsers = parseInt(body)
+          }
+        }
+      })
+      subscribedRooms.value.add(room.id)
+    }
+  })
+}
+
+// 新增：取消特定房間的訂閱
+function unsubscribeFromRoom(roomId) {
+  if (stompClient && subscribedRooms.value.has(roomId)) {
+    stompClient.unsubscribe(`/topic/room/${roomId}`)
+    subscribedRooms.value.delete(roomId)
+  }
+}
+
+function disconnectWebSocket() {
+  if (stompClient) {
+    stompClient.disconnect()
+    stompClient = null
+  }
+}
+
+watch(() => props.modelValue, (newVal) => {
+  if (newVal) {
+    fetchRooms()
+    connectWebSocket()
+  } else {
+    disconnectWebSocket()
+  }
+})
+
+watch(() => userId, () => {
+  checkIfInRoom()
+}, { immediate: true })
 </script>
 
 <style scoped>
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(11, 19, 32, 0.5); /* 保留原背景色 */
+  background: rgba(11, 19, 32, 0.5);
   display: grid;
   place-items: center;
   padding: 16px;
@@ -174,7 +411,7 @@ function handleImageError(event, roomId) {
 }
 
 .study-room {
-  background-color: #f8f1e9; /* 溫暖米色背景 */
+  background-color: #f8f1e9;
   width: 60%;
   padding-left: 40px;
   padding-right: 40px;
@@ -183,7 +420,7 @@ function handleImageError(event, roomId) {
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* 柔和陰影 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
@@ -192,12 +429,12 @@ function handleImageError(event, roomId) {
   justify-content: space-between;
   align-items: center;
   padding: 8px 16px;
-  border-bottom: 1px solid #e6d8c6; /* 暖色邊框 */
+  border-bottom: 1px solid #e6d8c6;
 }
 
 .header h2 {
   font-size: 1.5rem;
-  color: #4a2f1a; /* 深棕色文字 */
+  color: #4a2f1a;
   font-weight: 500;
 }
 
@@ -205,6 +442,11 @@ function handleImageError(event, roomId) {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nullTip {
+  opacity: 0.6;
 }
 
 .room-list {
@@ -217,15 +459,15 @@ function handleImageError(event, roomId) {
 
 .room-card {
   border-radius: 8px;
-  background-color: #fffaf4; /* 淺暖色卡片背景 */
-  border: 1px solid #e6d8c6; /* 暖色邊框 */
+  background-color: #fffaf4;
+  border: 1px solid #e6d8c6;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .room-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* 柔和懸浮效果 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .room-header {
@@ -240,7 +482,7 @@ function handleImageError(event, roomId) {
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  background-color: #d9c8b0; /* 暖色備用背景 */
+  background-color: #d9c8b0;
   border: 1px solid #e6d8c6;
 }
 
@@ -254,12 +496,12 @@ function handleImageError(event, roomId) {
 .room-info h3 {
   margin: 0 0 10px 0;
   font-size: 16px;
-  color: #4a2f1a; /* 深棕色標題 */
+  color: #4a2f1a;
 }
 
 .room-info p {
   margin: 5px 0;
-  color: #6b4e31; /* 柔和棕色文字 */
+  color: #6b4e31;
   font-size: 0.9rem;
 }
 
@@ -269,25 +511,24 @@ function handleImageError(event, roomId) {
   align-items: center;
   margin-top: 8px;
   font-size: 12px;
-  color: #8a6d4a; /* 淺棕色時間文字 */
+  color: #8a6d4a;
 }
 
 .time {
   color: #8a6d4a;
 }
 
-/* 原生對話框樣式 */
 .custom-dialog-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(11, 19, 32, 0.5); /* 保留原背景色 */
+  background: rgba(11, 19, 32, 0.5);
   display: grid;
   place-items: center;
-  z-index: 99999; /* 確保層級最高 */
+  z-index: 99999;
 }
 
 .custom-dialog {
-  background-color: #fffaf4; /* 淺暖色背景 */
+  background-color: #fffaf4;
   border-radius: 8px;
   width: 320px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -296,8 +537,8 @@ function handleImageError(event, roomId) {
 
 .custom-dialog-header {
   padding: 12px 16px;
-  background-color: #e6d8c6; /* 暖色頭部背景 */
-  color: #4a2f1a; /* 深棕色文字 */
+  background-color: #e6d8c6;
+  color: #4a2f1a;
   font-size: 1.1rem;
   font-weight: 500;
   text-align: center;
@@ -305,7 +546,7 @@ function handleImageError(event, roomId) {
 
 .custom-dialog-content {
   padding: 16px;
-  color: #6b4e31; /* 柔和棕色文字 */
+  color: #6b4e31;
   font-size: 0.9rem;
   text-align: center;
 }
@@ -315,7 +556,7 @@ function handleImageError(event, roomId) {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  border-top: 1px solid #e6d8c6; /* 暖色邊框 */
+  border-top: 1px solid #e6d8c6;
 }
 
 .confirm-btn, .cancel-btn {
@@ -328,21 +569,21 @@ function handleImageError(event, roomId) {
 }
 
 .confirm-btn {
-  background-color: #a67c52; /* 溫暖棕色按鈕 */
+  background-color: #a67c52;
   color: #fff;
 }
 
 .confirm-btn:hover {
-  background-color: #b89168; /* 懸浮時稍亮 */
+  background-color: #b89168;
 }
 
 .cancel-btn {
-  background-color: #e6d8c6; /* 淺暖色取消按鈕 */
+  background-color: #e6d8c6;
   color: #4a2f1a;
 }
 
 .cancel-btn:hover {
-  background-color: #d9c8b0; /* 懸浮時稍深 */
+  background-color: #d9c8b0;
 }
 
 @media (max-width: 768px) {

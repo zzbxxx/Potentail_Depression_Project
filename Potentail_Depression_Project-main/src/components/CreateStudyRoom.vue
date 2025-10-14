@@ -22,7 +22,7 @@
               <img
                 v-for="avatar in avatarOptions"
                 :key="avatar.value"
-                :src="avatar.value"
+                :src="avatar.url"
                 class="avatar-option"
                 :class="{ 'selected': roomAvatar === avatar.value }"
                 @click="selectAvatar(avatar.value)"
@@ -34,7 +34,7 @@
             <div class="avatar-preview-container">
               <img
                 v-if="roomAvatar"
-                :src="roomAvatar"
+                :src="avatarOptions.find(a => a.value === roomAvatar)?.url || defaultAvatar"
                 class="avatar-preview"
                 alt="頭像預覽"
                 @error="handleAvatarError"
@@ -46,14 +46,14 @@
         <div class="form-item">
           <label>類型</label>
           <el-select v-model="roomType" placeholder="選擇房間類型" class="w-1/2">
-            <el-option label="嚴格番茄鐘" value="strict-tomato" />
-            <el-option label="自由計時" value="free-time" />
-            <el-option label="互助房" value="mutual-aid" />
-            <el-option label="編程學習" value="programming" />
+            <el-option label="嚴格番茄鐘" value="嚴格番茄鐘" />
+            <el-option label="自由計時" value="自由計時" />
+            <el-option label="互助房" value="互助房" />
+            <el-option label="編程學習" value="編程學習" />
           </el-select>
         </div>
         <div class="form-item">
-          <label>標簽（可多選）</label>
+          <label>標簽（可多選，最多3個）</label>
           <el-select
             v-model="topics"
             multiple
@@ -63,7 +63,6 @@
             :max="3"
             placeholder="選擇或輸入話題（最多3個）"
             class="w-1/2"
-            @change="handleTopicChange"
           >
             <el-option v-for="item in topicOptions" :key="item" :label="item" :value="item" />
           </el-select>
@@ -90,6 +89,7 @@
 <script setup>
 import { ElMessage } from 'element-plus'
 import { ref } from 'vue'
+import RoomService from '/src/api/roomApi.js'
 
 const props = defineProps({
   modelValue: Boolean
@@ -98,65 +98,114 @@ const props = defineProps({
 const emit = defineEmits(['update:modelValue', 'create-room'])
 
 const roomName = ref('')
-const roomType = ref('嚴格番茄鐘') // 默認選擇“嚴格番茄鐘”
-const roomTags = ref([]) // 多選標簽
+const roomType = ref('嚴格番茄鐘')
+const topics = ref([])
 const maxUsers = ref(6)
 const roomAvatar = ref('')
-const typeOptions = ref(['嚴格番茄鐘', '自由計時', '互助房', '編程學習'])
-const tagOptions = ref(['數學', '繪畫', '哲學', '文學', '歷史', '科學'])
-const avatarOptions = ref([
-  { label: '頭像 1', value: new URL('../assets/image/avatar2.jpg', import.meta.url).href },
-  { label: '頭像 2', value: new URL('../assets/image/avatar3.jpg', import.meta.url).href },
-  { label: '頭像 2', value: new URL('../assets/image/avatar1.jpg', import.meta.url).href }
-])
-const topics = ref([])
-const topicOptions = ref(['美食', '旅遊', '學習', '生活', '科技'])
+const defaultAvatar = new URL('../assets/image/default-avatar.png', import.meta.url).href
 
-// 選擇頭像
+// 頭像選項，value 為後端期望的字符串，url 為前端顯示的路徑
+const avatarOptions = ref([
+  { label: '頭像 1', value: 'happy1', url: new URL('../assets/image/happy1.jpg', import.meta.url).href },
+  { label: '頭像 2', value: 'sweet1', url: new URL('../assets/image/sweet1.jpg', import.meta.url).href },
+  { label: '頭像 3', value: 'kind1', url: new URL('../assets/image/kind1.jpg', import.meta.url).href }
+])
+
+// 類型映射：前端中文 -> 後端英文
+const typeMap = {
+  '嚴格番茄鐘': 'strict_tomato',
+  '自由計時': 'free_time',
+  '互助房': 'mutual_aid',
+  '編程學習': 'programming'
+}
+
+// 話題映射：前端中文 -> 後端英文
+const topicMap = {
+  '數學': 'Math',
+  '繪畫': 'Painting',
+  '哲學': 'Philosophy',
+  '文學': 'Literature',
+  '歷史': 'History',
+  '科學': 'Physics',
+  '美食': 'Food',
+  '旅遊': 'Travel',
+  '學習': 'Study',
+  '生活': 'Life',
+  '科技': 'Technology'
+}
+
+// 話題選項
+const topicOptions = ref(['數學', '繪畫', '哲學', '文學', '歷史', '科學', '美食', '旅遊', '學習', '生活', '科技'])
+
 function selectAvatar(avatarValue) {
   roomAvatar.value = avatarValue
 }
 
-function handleCreate() {
+async function handleCreate() {
   if (!roomName.value.trim()) {
-    ElMessage.warning('請輸入自習室名稱')
-    return
+    ElMessage.warning('請輸入自習室名稱');
+    return;
   }
   if (!roomType.value) {
-    ElMessage.warning('請選擇類型')
-    return
+    ElMessage.warning('請選擇類型');
+    return;
   }
   if (!roomAvatar.value) {
-    ElMessage.warning('請選擇頭像')
-    return
+    ElMessage.warning('請選擇頭像');
+    return;
   }
-  const newRoom = {
-    id: Date.now(),
-    name: roomName.value,
-    type: roomType.value,
-    tags: roomTags.value,
-    maxUsers: maxUsers.value,
-    currentUsers: 1,
-    creatorId: Math.floor(1000 + Math.random() * 9000),
-    status: '進行中',
-    createdAt: new Date().toISOString(),
-    avatar: roomAvatar.value
+  if (topics.value.length > 3) {
+    ElMessage.warning('最多選擇3個標籤');
+    return;
   }
-  emit('create-room', newRoom)
-  close()
+
+  try {
+    const userId = localStorage.getItem('userId') || localStorage.getItem('user_id');
+    if (!userId) {
+      ElMessage.error('用戶未登錄');
+      return;
+    }
+
+    const requestData = {
+      userId: Number(userId),
+      name: roomName.value.trim(),
+      type: typeMap[roomType.value],
+      topics: topics.value.map(topic => topicMap[topic] || topic),
+      maxUsers: maxUsers.value,
+      avatar: roomAvatar.value
+    };
+
+    const response = await RoomService.createRoom(requestData);
+    if (!response.success) {
+      throw new Error(response.message || '創建自習室失敗');
+    }
+
+    const newRoom = {
+      ...response.data,
+      type: Object.keys(typeMap).find(key => typeMap[key] === response.data.type) || response.data.type,
+      tags: response.data.topics.map(topic => Object.keys(topicMap).find(key => topicMap[key] === topic) || topic),
+      avatar: avatarOptions.value.find(a => a.value === response.data.avatar)?.url || defaultAvatar
+    };
+
+    emit('create-room', newRoom);
+    close();
+  } catch (e) {
+    console.error('創建自習室失敗:', e);
+    ElMessage.error(e.message || '創建自習室失敗');
+  }
 }
 
 function close() {
   emit('update:modelValue', false)
   roomName.value = ''
   roomType.value = '嚴格番茄鐘'
-  roomTags.value = []
+  topics.value = []
   maxUsers.value = 6
   roomAvatar.value = ''
 }
 
 function handleAvatarError(event) {
-  event.target.src = new URL('../assets/image/default-avatar.png', import.meta.url).href
+  event.target.src = defaultAvatar
 }
 </script>
 

@@ -109,29 +109,30 @@ public class ArticleService {
     }
     @Transactional
     public Article createArticle(ArticleReq articleDTO, MultipartFile[] images) throws IOException {
-        // 验证 userId
+        // 驗證 userId
         User user = userRepository.findById(articleDTO.getUserId())
-                .orElseThrow(() -> new IllegalArgumentException("无效的用户 ID: " + articleDTO.getUserId()));
+                .orElseThrow(() -> new IllegalArgumentException("無效的用戶 ID: " + articleDTO.getUserId()));
 
-        // 验证话题数量
+        // 驗證話題數量
         if (articleDTO.getTopics().size() > 3) {
-            throw new IllegalArgumentException("最多只能选择3个话题");
+            throw new IllegalArgumentException("最多只能選擇 3 個話題");
         }
 
-        // 处理话题
+        // 處理話題
         Set<Topic> topics = new HashSet<>();
         for (String topicName : articleDTO.getTopics()) {
-            Topic topic = topicRepository.findByName(topicName)
+            Topic topic = topicRepository.findByNameAndCategoryIn(topicName, List.of(Topic.Category.article, Topic.Category.both))
                     .orElseGet(() -> {
                         Topic newTopic = new Topic();
                         newTopic.setName(topicName);
                         newTopic.setCreatedAt(LocalDateTime.now());
+                        newTopic.setCategory(Topic.Category.article); // 設置為 article
                         return topicRepository.save(newTopic);
                     });
             topics.add(topic);
         }
 
-        // 处理块内容并替换图片 blob URL
+        // 處理塊內容並替換圖片 blob URL
         List<Map<String, String>> processedBlocks = new ArrayList<>();
         int imageIndex = 0;
         for (ArticleReq.BlockDTO block : articleDTO.getBlocks()) {
@@ -142,11 +143,11 @@ public class ArticleService {
                 blockMap.put("content", sanitizedContent);
             } else if ("image".equals(block.getType())) {
                 if (imageIndex >= images.length) {
-                    throw new IllegalArgumentException("图片文件数量不足");
+                    throw new IllegalArgumentException("圖片文件數量不足");
                 }
                 MultipartFile image = images[imageIndex++];
                 if (!image.getContentType().startsWith("image/") || image.getSize() > 2 * 1024 * 1024) {
-                    throw new IllegalArgumentException("图片格式无效或大小超过 2MB");
+                    throw new IllegalArgumentException("圖片格式無效或大小超過 2MB");
                 }
                 String fileName = "articles/" + Instant.now().toEpochMilli() + "-" + image.getOriginalFilename();
                 String contentType = s3Util.getContentTypeFromFileName(image.getOriginalFilename());
@@ -167,23 +168,23 @@ public class ArticleService {
             processedBlocks.add(blockMap);
         }
 
-        // 创建 Article 实体
+        // 創建 Article 實體
         Article article = new Article();
         article.setUser(user);
         article.setTitle(articleDTO.getTitle());
         try {
             article.setArticleType(ArticleType.valueOf(articleDTO.getArticleType().toUpperCase()));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("无效的文章类型: " + articleDTO.getArticleType());
+            throw new IllegalArgumentException("無效的文章類型: " + articleDTO.getArticleType());
         }
         article.setContentFromJson(processedBlocks);
         article.setTopics(topics);
         article.setStatus(Article.ArticleStatus.DRAFT);
 
-        // 保存到数据库
+        // 保存到資料庫
         Article savedArticle = articleRepository.save(article);
 
-        // 缓存到 Redis
+        // 快取到 Redis
         try {
             String json = objectMapper.writeValueAsString(savedArticle);
             redisTemplate.opsForValue().set("article:" + savedArticle.getId(), json, 3600, TimeUnit.SECONDS);
@@ -191,7 +192,7 @@ public class ArticleService {
                 redisTemplate.opsForZSet().add("topics:" + topic.getId() + ":articles", String.valueOf(savedArticle.getId()), System.currentTimeMillis());
             }
         } catch (Exception e) {
-            System.err.println("缓存文章失败: " + e.getMessage());
+            System.err.println("快取文章失敗: " + e.getMessage());
         }
 
         return savedArticle;

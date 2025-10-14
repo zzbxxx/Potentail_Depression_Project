@@ -130,56 +130,8 @@ const studyRoomShow = ref(false)
 const createRoomShow = ref(false)
 const router = useRouter()
 
-const rooms = ref([
-  { 
-    id: 1, 
-    name: '专注学习室1', 
-    type: '嚴格番茄鐘', 
-    tags: ['數學', '科學'], 
-    currentUsers: 5, 
-    maxUsers: 6, 
-    creatorId: 1001, 
-    status: '进行中', 
-    createdAt: '2025-10-12T10:00:00', 
-    avatar: new URL('../assets/image/avatar2.jpg', import.meta.url).href
-  },
-  { 
-    id: 2, 
-    name: '深夜自习室', 
-    type: '自由計時', 
-    tags: ['繪畫', '文學'], 
-    currentUsers: 3, 
-    maxUsers: 6, 
-    creatorId: 1002, 
-    status: '进行中', 
-    createdAt: '2025-10-12T22:00:00', 
-    avatar: new URL('../assets/image/avatar3.jpg', import.meta.url).href
-  },
-  { 
-    id: 3, 
-    name: '早起学习室', 
-    type: '互助房', 
-    tags: ['哲學', '歷史'], 
-    currentUsers: 6, 
-    maxUsers: 6, 
-    creatorId: 1003, 
-    status: '进行中', 
-    createdAt: '2025-10-12T06:00:00', 
-    avatar: new URL('../assets/image/avatar3.jpg', import.meta.url).href
-  },
-  { 
-    id: 4, 
-    name: '编程冲刺室', 
-    type: '編程學習', 
-    tags: ['編程學習', '科學'], 
-    currentUsers: 4, 
-    maxUsers: 6, 
-    creatorId: 1004, 
-    status: '进行中', 
-    createdAt: '2025-10-12T15:00:00', 
-    avatar: new URL('../assets/image/avatar2.jpg', import.meta.url).href
-  },
-])
+// 移除靜態 rooms 數據，改為響應式空數組
+const rooms = ref([])
 
 const goToHome = () => {
   window.location.href = '/'

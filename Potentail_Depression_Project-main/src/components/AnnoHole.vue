@@ -173,17 +173,9 @@ const handleArticleLike = (updatedArticle) => {
   }
 };
 
-// const handleArticleFavorite = (article) => {
-//   ElMessage.info(`收藏文章 ${article.id}`);
-// };
-
 const handleArticleShare = (article) => {
   ElMessage.success(`分享文章 ${article.id}`);
 };
-
-onMounted(() => {
-  getInfo();
-});
 
 const props = defineProps({
   modelValue: {
@@ -194,8 +186,12 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
+// 監聽 modelValue，當組件顯示時觸發 getInfo
 watch(() => props.modelValue, (newVal) => {
   console.log('AnnoHole 顯示狀態:', newVal);
+  if (newVal) {
+    getInfo(); // 僅在組件顯示時調用 getInfo
+  }
 });
 
 const close = () => {

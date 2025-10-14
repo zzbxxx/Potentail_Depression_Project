@@ -6,6 +6,7 @@ import PersonalCenter from '../views/PersonalCenter.vue'
 import NotFound from '../views/MessageCode/NotFound404.vue'
 import Editror from '../views/Editor.vue'
 import DetailPage from '../views/DetailPage.vue'
+import StudyRoomPage from '../views/StudyRoomPage.vue'
 import UserDetailPage from '../views/UserDetailPage.vue'
 import AdminControlPage from '../views/AdminControlPage.vue'
 // @ts-ignore
@@ -56,6 +57,12 @@ const routes = [
         path: '/detail/:id',
         name: 'DetailPage',
         component: DetailPage,
+        meta: { requiresAuth: true },
+    },
+    {
+        path: '/study-room/:id',
+        name: 'StudyRoomPage',
+        component: StudyRoomPage,
         meta: { requiresAuth: true },
     },
     {

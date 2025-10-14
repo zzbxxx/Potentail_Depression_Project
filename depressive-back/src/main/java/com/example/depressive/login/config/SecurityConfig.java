@@ -23,6 +23,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/devices/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/card/**").permitAll()
@@ -36,6 +37,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/topics/**").permitAll()
                         .requestMatchers("/api/favorites/**").permitAll()
                         .requestMatchers("/api/likes/**").permitAll()
+                        .requestMatchers("/api/rooms/**").permitAll()
                         .anyRequest().authenticated()
 
                 )

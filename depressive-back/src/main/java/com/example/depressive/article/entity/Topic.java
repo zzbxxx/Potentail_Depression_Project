@@ -23,4 +23,13 @@ public class Topic {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(name = "category", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Category category = Category.both;
+
+
+    public enum Category {
+        room, article, both
+    }
 }
