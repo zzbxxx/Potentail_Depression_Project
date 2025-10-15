@@ -165,10 +165,16 @@ function goToHome() {
 }
 
 async function leaveRoomAndGoHome() {
-  await leaveRoom()
-  router.push({ name: 'MainPage' })
-  closeBackDialog()
-  closeExitDialog()
+  try {
+    await leaveRoom()  // 調用原 leaveRoom
+    ElMessage.success('您已成功退出自習室')  // ✅ 新增：退出提示
+    
+    router.push({ name: 'MainPage' })
+    closeBackDialog()
+    closeExitDialog()
+  } catch (e) {
+    ElMessage.error('退出自習室失敗: ' + e.message)
+  }
 }
 
 function connectWebSocket() {
