@@ -31,11 +31,16 @@ public class ArticleController {
         return ResponseEntity.ok(articles);
     }
     @PostMapping("/putArticleData")
-    public ResponseEntity<Article> createArticle(
-            @RequestPart("article") ArticleReq articleDTO,
-            @RequestPart(value = "images", required = false) MultipartFile[] images) throws IOException {
-        Article savedArticle = articleService.createArticle(articleDTO, images);
-        return ResponseEntity.ok(savedArticle);
+    public ResponseEntity<Article> putArticleData(
+                                                    @RequestPart("article") ArticleReq articleDTO,
+                                                    @RequestPart(value = "images", required = false) MultipartFile[] images) throws IOException {
+
+        // ✅ 添加 id 判断
+        if (articleDTO.getId() != null) {
+            return ResponseEntity.ok(articleService.updateArticle(articleDTO, images));
+        } else {
+            return ResponseEntity.ok(articleService.createArticle(articleDTO, images));
+        }
     }
 
     @GetMapping("/getAllArticles")

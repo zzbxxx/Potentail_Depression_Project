@@ -198,6 +198,97 @@ public class ArticleService {
         return savedArticle;
     }
 
+    @Transactional
+    public Article updateArticle(ArticleReq articleDTO, MultipartFile[] images) throws IOException {
+        // ✅ 查找现有文章
+        Article article = articleRepository.findById(articleDTO.getId())
+                .orElseThrow(() -> new IllegalArgumentException("文章不存在: " + articleDTO.getId()));
+
+        // ✅ 验证用户权限
+        User user = userRepository.findById(articleDTO.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("用户不存在"));
+        if (!article.getUser().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("无权限修改他人文章");
+        }
+
+        // ✅ 验证话题数量
+        if (articleDTO.getTopics().size() > 3) {
+            throw new IllegalArgumentException("最多只能选择 3 个话题");
+        }
+
+        // 处理话题（同 createArticle）
+        Set<Topic> topics = new HashSet<>();
+        for (String topicName : articleDTO.getTopics()) {
+            Topic topic = topicRepository.findByNameAndCategoryIn(topicName, List.of(Topic.Category.article, Topic.Category.both))
+                    .orElseGet(() -> {
+                        Topic newTopic = new Topic();
+                        newTopic.setName(topicName);
+                        newTopic.setCreatedAt(LocalDateTime.now());
+                        newTopic.setCategory(Topic.Category.article);
+                        return topicRepository.save(newTopic);
+                    });
+            topics.add(topic);
+        }
+
+        // 处理块内容（同 createArticle）
+        List<Map<String, String>> processedBlocks = new ArrayList<>();
+        int imageIndex = 0;
+        for (ArticleReq.BlockDTO block : articleDTO.getBlocks()) {
+            Map<String, String> blockMap = new HashMap<>();
+            blockMap.put("type", block.getType());
+            if ("text".equals(block.getType())) {
+                String sanitizedContent = htmlSanitizer.sanitize(block.getContent());
+                blockMap.put("content", sanitizedContent);
+            } else if ("image".equals(block.getType())) {
+                String imageUrl;
+                if (imageIndex < images.length && images[imageIndex] != null) {
+                    // 新上传图片
+                    MultipartFile image = images[imageIndex++];
+                    if (!image.getContentType().startsWith("image/") || image.getSize() > 2 * 1024 * 1024) {
+                        throw new IllegalArgumentException("图片格式无效或大小超过 2MB");
+                    }
+                    String fileName = "articles/" + Instant.now().toEpochMilli() + "-" + image.getOriginalFilename();
+                    String contentType = s3Util.getContentTypeFromFileName(image.getOriginalFilename());
+                    PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                            .bucket(s3Util.getBucketName())
+                            .key(fileName)
+                            .contentType(contentType)
+                            .build();
+                    s3Client.putObject(putObjectRequest, software.amazon.awssdk.core.sync.RequestBody.fromBytes(image.getBytes()));
+                    imageUrl = s3Util.generatePublicUrl(fileName);
+                } else {
+                    // 保留原图片
+                    imageUrl = block.getContent();
+                    imageIndex++;
+                }
+                blockMap.put("content", imageUrl);
+            } else if ("link".equals(block.getType())) {
+                blockMap.put("content", block.getContent());
+            }
+            processedBlocks.add(blockMap);
+        }
+
+        // ✅ 更新文章
+        article.setTitle(articleDTO.getTitle());
+        article.setArticleType(ArticleType.valueOf(articleDTO.getArticleType().toUpperCase()));
+        article.setContentFromJson(processedBlocks);
+        article.setTopics(topics);
+        article.setUpdatedAt(LocalDateTime.now());
+
+        // 保存
+        Article updatedArticle = articleRepository.save(article);
+
+        // 更新 Redis 缓存
+        try {
+            String json = objectMapper.writeValueAsString(updatedArticle);
+            redisTemplate.opsForValue().set("article:" + updatedArticle.getId(), json, 3600, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            System.err.println("缓存文章失败: " + e.getMessage());
+        }
+
+        return updatedArticle;
+    }
+
     private String generatePresignedUrl(String key) {
         software.amazon.awssdk.services.s3.model.GetObjectRequest getObjectRequest = software.amazon.awssdk.services.s3.model.GetObjectRequest.builder()
                 .bucket(s3Util.getBucketName())

@@ -6,6 +6,7 @@ import java.util.List;
 
 @Data
 public class ArticleReq {
+    private Long id;
     private long userId;
     private String title;
     private String articleType;

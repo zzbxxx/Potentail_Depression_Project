@@ -10,6 +10,8 @@ import com.example.depressive.room.repository.RoomRepository;
 import com.example.depressive.room.repository.RoomTopicRepository;
 import com.example.depressive.article.entity.Topic;
 import com.example.depressive.article.repository.TopicRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,9 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -47,6 +47,12 @@ public class RoomService {
 
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+    private String getUserStatesKey(Long roomId) {
+        return "room:" + roomId + ":userStates";
+    }
 
     @Transactional
     public RoomResp createRoom(RoomReq roomReq) {
@@ -210,7 +216,7 @@ public class RoomService {
     }
 
     @Transactional
-    public RoomResp getRoomById(Long roomId) {
+    public RoomResp getRoomById(Long roomId) throws JsonProcessingException {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("房間 ID 不存在: " + roomId));
 
@@ -244,11 +250,74 @@ public class RoomService {
                 .collect(Collectors.toSet());
         resp.setTopics(topics);
 
+        String usersSetKey = "room:" + roomId + ":users";
+        String seatsKey = "room:" + roomId + ":seats";
+        String userStatesKey = getUserStatesKey(roomId);
+        Set<String> userIds = redisTemplate.opsForSet().members(usersSetKey);
+        List<Map<String, Object>> users = new ArrayList<>();
+
+        if (userIds != null) {
+            for (String uid : userIds) {
+                //  新增：检查用户状态是否存在
+                Map<Object, Object> stateMap = redisTemplate.opsForHash().entries(userStatesKey);
+                String stateJson = (String) stateMap.get(uid);
+
+                // 如果状态不存在，跳过该用户（已离开）
+                if (stateJson == null) {
+                    logger.info("跳过已离开用户: roomId={}, userId={}", roomId, uid);
+                    continue;
+                }
+
+                User user = userRepository.findById(Long.parseLong(uid)).orElse(null);
+                if (user != null) {
+                    Map<String, Object> userInfo = new HashMap<>();
+                    userInfo.put("userId", user.getId());
+                    userInfo.put("nickname", user.getNickname());
+                    userInfo.put("avatar", user.getAvatar() == null ? "default" : user.getAvatar());
+
+                    // 解析完整状态
+                    Map<String, Object> state = new ObjectMapper().readValue(stateJson, Map.class);
+                    int seatIndex = (Integer) state.getOrDefault("seatIndex", users.size());
+                    String status = (String) state.getOrDefault("status", "FOCUSED");
+                    String message = (String) state.getOrDefault("message", "");
+                    int timer = (Integer) state.getOrDefault("timer", 0);
+
+                    userInfo.put("seatIndex", seatIndex);
+                    userInfo.put("status", status);
+                    userInfo.put("message", message);
+                    userInfo.put("timer", timer);
+
+                    users.add(userInfo);
+                }
+            }
+        }
+        // 在響應中添加用戶列表
+        resp.setUsers(users);
+
         return resp;
     }
 
+    public void updateSeat(Long roomId, Long userId, int seatIndex) throws JsonProcessingException {
+        String userStatesKey = getUserStatesKey(roomId);
+
+        Map<Object, Object> stateMap = redisTemplate.opsForHash().entries(userStatesKey);
+        String stateJson = (String) stateMap.get(userId.toString());
+        Map<String, Object> state = new HashMap<>();
+        try {
+            if (stateJson != null) {
+                state = objectMapper.readValue(stateJson, Map.class);
+            }
+        } catch (Exception e) {
+            logger.warn("解析座位狀態失敗 userId={}, error={}", userId, e.getMessage());
+        }
+        state.put("seatIndex", seatIndex);
+
+        //  保存完整狀態
+        redisTemplate.opsForHash().put(userStatesKey, userId.toString(), objectMapper.writeValueAsString(state));
+        redisTemplate.expire(userStatesKey, 1, TimeUnit.HOURS);
+    }
     @Transactional
-    public RoomResp joinRoom(Long roomId, Long userId) {
+    public RoomResp joinRoom(Long roomId, Long userId) throws JsonProcessingException {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("房間 ID 不存在: " + roomId));
         User user = userRepository.findById(userId)
@@ -260,37 +329,13 @@ public class RoomService {
 
         String currentUsersKey = "room:" + roomId + ":current_users";
         String usersSetKey = "room:" + roomId + ":users";
+        String seatsKey = "room:" + roomId + ":seats";  // 新增座位Key
+
         try {
             // 檢查用戶是否已在房間中
             Boolean isMember = redisTemplate.opsForSet().isMember(usersSetKey, userId.toString());
             if (Boolean.TRUE.equals(isMember)) {
-                // 用戶已在房間中，直接返回房間數據
-                RoomResp resp = new RoomResp();
-                resp.setId(room.getId());
-                resp.setName(room.getName());
-                resp.setType(room.getType().name());
-                resp.setMaxUsers(room.getMaxUsers());
-                resp.setCurrentUsers(room.getCurrentUsers());
-                resp.setCreatorId(room.getCreator().getId());
-                resp.setCreatorNickname(room.getCreator().getNickname());
-                resp.setCreatorAvatar(room.getCreator().getAvatar());
-                resp.setStatus(room.getStatus().name());
-                resp.setCreatedAt(room.getCreatedAt());
-                resp.setEndTime(room.getEndTime());
-                resp.setAvatar(room.getAvatar());
-
-                List<RoomTopic> roomTopics = roomTopicRepository.findByRoomId(room.getId());
-                Set<String> topics = roomTopics.stream()
-                        .map(roomTopic -> roomTopic.getTopic().getName())
-                        .collect(Collectors.toSet());
-                resp.setTopics(topics);
-
-                // 更新 Redis 中的人數（以防數據不同步）
-                String currentUsersStr = redisTemplate.opsForValue().get(currentUsersKey);
-                if (currentUsersStr != null) {
-                    resp.setCurrentUsers(Byte.parseByte(currentUsersStr));
-                }
-                return resp;
+                return getRoomById(roomId);  // 直接返回完整房間數據（含座位）
             }
 
             // 檢查房間是否已滿
@@ -300,6 +345,30 @@ public class RoomService {
                 throw new IllegalArgumentException("房間已滿: " + roomId);
             }
 
+            int seatIndex = 0;
+            while (redisTemplate.opsForHash().hasKey(seatsKey, String.valueOf(seatIndex))) {
+                seatIndex++;
+                if (seatIndex >= room.getMaxUsers()) break;
+            }
+
+            // 保存座位到 Redis
+            redisTemplate.opsForHash().put(seatsKey, userId.toString(), String.valueOf(seatIndex));
+            redisTemplate.expire(seatsKey, 1, TimeUnit.HOURS);
+
+            Map<String, Object> initialState = new HashMap<>();
+            initialState.put("seatIndex", seatIndex);
+            initialState.put("status", "FOCUSED");
+            initialState.put("message", "");
+            initialState.put("timer", 0);
+
+            String userStatesKey = getUserStatesKey(roomId);
+            try {
+                redisTemplate.opsForHash().put(userStatesKey, userId.toString(), objectMapper.writeValueAsString(initialState));
+                redisTemplate.expire(userStatesKey, 1, TimeUnit.HOURS);
+            } catch (Exception e) {
+                logger.error("保存初始狀態失敗 roomId={}, userId={}, error={}", roomId, userId, e.getMessage());
+                throw e;
+            }
             // 增加人數並記錄用戶
             redisTemplate.opsForValue().increment(currentUsersKey, 1);
             redisTemplate.opsForSet().add(usersSetKey, userId.toString());
@@ -313,28 +382,10 @@ public class RoomService {
             // 廣播人數更新
             messagingTemplate.convertAndSend("/topic/room/" + roomId, room.getCurrentUsers());
 
-            // 構建響應
-            RoomResp resp = new RoomResp();
-            resp.setId(room.getId());
-            resp.setName(room.getName());
-            resp.setType(room.getType().name());
-            resp.setMaxUsers(room.getMaxUsers());
-            resp.setCurrentUsers((byte) (currentUsers + 1));
-            resp.setCreatorId(room.getCreator().getId());
-            resp.setCreatorNickname(room.getCreator().getNickname());
-            resp.setCreatorAvatar(room.getCreator().getAvatar());
-            resp.setStatus(room.getStatus().name());
-            resp.setCreatedAt(room.getCreatedAt());
-            resp.setEndTime(room.getEndTime());
-            resp.setAvatar(room.getAvatar());
+            messagingTemplate.convertAndSend("/topic/room/" + roomId + "/fullUpdate", getRoomById(roomId));
+            // 返回完整房間數據（含所有座位）
+            return getRoomById(roomId);
 
-            List<RoomTopic> roomTopics = roomTopicRepository.findByRoomId(room.getId());
-            Set<String> topics = roomTopics.stream()
-                    .map(roomTopic -> roomTopic.getTopic().getName())
-                    .collect(Collectors.toSet());
-            resp.setTopics(topics);
-
-            return resp;
         } catch (Exception e) {
             logger.error("Failed to join room {} for user {}: {}", roomId, userId, e.getMessage());
             throw e;
@@ -342,14 +393,15 @@ public class RoomService {
     }
 
     @Transactional
-    public RoomResp leaveRoom(Long roomId, Long userId) {
+    public RoomResp leaveRoom(Long roomId, Long userId) throws JsonProcessingException {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("房間 ID 不存在: " + roomId));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("用戶 ID 不存在: " + userId));
 
         String currentUsersKey = "room:" + roomId + ":current_users";
         String usersSetKey = "room:" + roomId + ":users";
+        String seatsKey = "room:" + roomId + ":seats";
+        String userStatesKey = getUserStatesKey(roomId);
+
         try {
             // 檢查用戶是否在房間中
             Boolean isMember = redisTemplate.opsForSet().isMember(usersSetKey, userId.toString());
@@ -357,58 +409,76 @@ public class RoomService {
                 throw new IllegalArgumentException("用戶不在房間中: " + userId);
             }
 
-            // 減少人數並移除用戶
+            // 減少人數並移除用戶 + 座位
             String currentUsersStr = redisTemplate.opsForValue().get(currentUsersKey);
             int currentUsers = currentUsersStr != null ? Integer.parseInt(currentUsersStr) : room.getCurrentUsers();
             if (currentUsers > 0) {
                 redisTemplate.opsForValue().decrement(currentUsersKey, 1);
                 redisTemplate.opsForSet().remove(usersSetKey, userId.toString());
 
+                // 清理用戶狀態和座位
+                redisTemplate.opsForHash().delete(userStatesKey, userId.toString());
+                redisTemplate.opsForHash().delete(seatsKey, userId.toString());
+
                 // 更新房間數據庫
                 room.setCurrentUsers((byte) (currentUsers - 1));
                 room.setUpdatedAt(LocalDateTime.now());
                 roomRepository.save(room);
 
+                messagingTemplate.convertAndSend("/topic/room/" + roomId + "/seatUpdate",
+                        Map.of("userId", userId, "seatIndex", -1, "nickname", "", "avatar", ""));
                 // 檢查是否所有人都離開了房間
                 if (currentUsers - 1 == 0) {
-                    // 所有人都離開，關閉房間
-                    return closeRoom(roomId);
+                    RoomResp closedRoom = closeRoom(roomId);
+                    // 廣播房間關閉
+                    messagingTemplate.convertAndSend("/topic/room/" + roomId + "/fullUpdate", closedRoom);
+                    return closedRoom;
                 }
 
                 // 廣播人數更新
                 messagingTemplate.convertAndSend("/topic/room/" + roomId, room.getCurrentUsers());
+
+                RoomResp updatedRoom = getRoomById(roomId);
+                messagingTemplate.convertAndSend("/topic/room/" + roomId + "/fullUpdate", updatedRoom);
             }
 
-            // 構建響應
-            RoomResp resp = new RoomResp();
-            resp.setId(room.getId());
-            resp.setName(room.getName());
-            resp.setType(room.getType().name());
-            resp.setMaxUsers(room.getMaxUsers());
-            resp.setCurrentUsers((byte) (currentUsers - 1));
-            resp.setCreatorId(room.getCreator().getId());
-            resp.setCreatorNickname(room.getCreator().getNickname());
-            resp.setCreatorAvatar(room.getCreator().getAvatar());
-            resp.setStatus(room.getStatus().name());
-            resp.setCreatedAt(room.getCreatedAt());
-            resp.setEndTime(room.getEndTime());
-            resp.setAvatar(room.getAvatar());
+            // 返回完整房間數據
+            return getRoomById(roomId);
 
-            List<RoomTopic> roomTopics = roomTopicRepository.findByRoomId(room.getId());
-            Set<String> topics = roomTopics.stream()
-                    .map(roomTopic -> roomTopic.getTopic().getName())
-                    .collect(Collectors.toSet());
-            resp.setTopics(topics);
-
-            return resp;
         } catch (Exception e) {
             logger.error("Failed to leave room {} for user {}: {}", roomId, userId, e.getMessage());
             throw e;
         }
     }
 
+    public void updateUserState(Long roomId, Long userId, String status, String message, int timer) {
+        String userStatesKey = getUserStatesKey(roomId);
+        Map<Object, Object> stateMap = redisTemplate.opsForHash().entries(userStatesKey);
+        String stateJson = (String) stateMap.get(userId.toString());
+        Map<String, Object> state = new HashMap<>();
+
+        try {
+            if (stateJson != null) {
+                state = objectMapper.readValue(stateJson, Map.class);
+            }
+        } catch (Exception e) {
+            logger.warn("解析用戶狀態失敗 userId={}, error={}", userId, e.getMessage());
+        }
+
+        state.put("status", status);
+        state.put("message", message);
+        state.put("timer", timer);
+
+        try {
+            redisTemplate.opsForHash().put(userStatesKey, userId.toString(), objectMapper.writeValueAsString(state));
+            redisTemplate.expire(userStatesKey, 1, TimeUnit.HOURS);
+        } catch (Exception e) {
+            logger.error("保存用戶狀態失敗 roomId={}, userId={}, error={}", roomId, userId, e.getMessage());
+            throw new RuntimeException("狀態更新失敗", e);
+        }
+    }
     @Transactional
-    public RoomResp closeRoom(Long roomId) {
+    public RoomResp closeRoom(Long roomId) throws JsonProcessingException {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new IllegalArgumentException("房間 ID 不存在: " + roomId));
 
@@ -455,6 +525,7 @@ public class RoomService {
                 .collect(Collectors.toSet());
         resp.setTopics(topics);
 
+        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/fullUpdate", getRoomById(roomId));
         return resp;
     }
 
@@ -502,5 +573,60 @@ public class RoomService {
             }
         }
         return null; // 用戶不在任何活躍房間
+    }
+
+    @Transactional
+    public RoomResp updateRoomAvatar(Long roomId, Long userId, String newAvatar) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new IllegalArgumentException("房間 ID 不存在: " + roomId));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("用戶 ID 不存在: " + userId));
+
+        //  權限檢查：只有創建者或房間內成員可以修改頭像
+        String usersSetKey = "room:" + roomId + ":users";
+        Boolean isMember = redisTemplate.opsForSet().isMember(usersSetKey, userId.toString());
+        if (!room.getCreator().getId().equals(userId) && !Boolean.TRUE.equals(isMember)) {
+            throw new IllegalArgumentException("無權限修改房間頭像");
+        }
+
+        // 頭像驗證
+        if (newAvatar == null || newAvatar.trim().isEmpty()) {
+            throw new IllegalArgumentException("頭像不能為空");
+        }
+        if (!newAvatar.matches("^(happy1|sweet1|kind1)$")) { // 只允許系統頭像
+            throw new IllegalArgumentException("無效的頭像選項");
+        }
+
+        // 更新頭像
+        room.setAvatar(newAvatar);
+        room.setUpdatedAt(LocalDateTime.now());
+        roomRepository.save(room);
+        logger.info("房間頭像更新成功: roomId={}, avatar={}, userId={}", roomId, newAvatar, userId);
+
+        // 構建響應
+        RoomResp resp = new RoomResp();
+        resp.setId(room.getId());
+        resp.setName(room.getName());
+        resp.setType(room.getType().name());
+        resp.setMaxUsers(room.getMaxUsers());
+        resp.setCurrentUsers(room.getCurrentUsers());
+        resp.setCreatorId(room.getCreator().getId());
+        resp.setCreatorNickname(room.getCreator().getNickname());
+        resp.setCreatorAvatar(room.getCreator().getAvatar());
+        resp.setStatus(room.getStatus().name());
+        resp.setCreatedAt(room.getCreatedAt());
+        resp.setEndTime(room.getEndTime());
+        resp.setAvatar(newAvatar);
+
+        List<RoomTopic> roomTopics = roomTopicRepository.findByRoomId(room.getId());
+        Set<String> topics = roomTopics.stream()
+                .map(roomTopic -> roomTopic.getTopic().getName())
+                .collect(Collectors.toSet());
+        resp.setTopics(topics);
+
+        messagingTemplate.convertAndSend("/topic/room/" + roomId + "/avatarUpdate",
+                Map.of("userId", userId, "avatar", newAvatar));
+
+        return resp;
     }
 }

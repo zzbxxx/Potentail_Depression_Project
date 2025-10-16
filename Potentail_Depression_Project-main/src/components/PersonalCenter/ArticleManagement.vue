@@ -103,8 +103,8 @@ const openDetail = (article) => {
   router.push({ name: "DetailPage", params: { id: article.id } })
 }
 
-const editArticle = (article) => {
-  router.push({ name: "ArticleEdit", params: { id: article.id } })
+const editArticle = (article) => { 
+  router.push({ name: "Editor", params: { id: article.id } })
 }
 
 const toggleVisibility = async (article, isPublicInFollow) => {

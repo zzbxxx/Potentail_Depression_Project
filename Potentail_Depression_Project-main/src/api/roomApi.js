@@ -29,11 +29,21 @@ export default class RoomService {
                 "Content-Type": "application/json"
             }
         })
-        return response.json()
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message || '獲取房間失敗')
+        }
+
+        if (data.data.users) {
+            data.data.users = data.data.users.map(u => ({
+                ...u,
+                seatIndex: u.seatIndex || 0
+            }))
+        }
+        return data
     }
 
     static async joinRoom(roomId, userId) {
-        console.log("ujid" + userId);
         const response = await fetch(`${this.BASE_URL}/join/${roomId}`, {
             method: "POST",
             headers: {
@@ -75,5 +85,37 @@ export default class RoomService {
             }
         });
         return response.json();
+    }
+
+    static async updateRoomAvatar(roomId, userId, avatar) {
+        try {
+            const response = await fetch(`${this.BASE_URL}/${roomId}/avatar`, {
+                method: "PUT",  // ✅ 修改為 PUT
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ userId, avatar })
+            })
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+            }
+
+            return await response.json()
+        } catch (error) {
+            console.error('更新頭像 API 錯誤:', error)
+            throw error
+        }
+    }
+
+    static async updateUserState(roomId, userId, status, message, timer) {
+        const response = await fetch(`${this.BASE_URL}/${roomId}/userState`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId, status, message, timer })
+        })
+        const data = await response.json()
+        if (!data.success) throw new Error(data.message)
+        return data
     }
 }

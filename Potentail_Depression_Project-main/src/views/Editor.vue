@@ -63,20 +63,57 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { onMounted, ref ,computed} from 'vue';
 import draggable from 'vuedraggable';
 import Toolbar from '/src/components/Editor/Toolbar.vue';
 import TextBlock from '/src/components/Editor/TextBlock.vue';
 import ImageBlock from '/src/components/Editor/ImageBlock.vue';
 import { ElInput, ElIcon, ElButton, ElSelect, ElOption, ElMessage, ElLoading } from 'element-plus';
 import { Rank } from '@element-plus/icons-vue';
+import { useRoute } from 'vue-router';
 import ArticleService from '/src/api/articleApi';
 const title = ref('');
 const articleType = ref('');
 const blocks = ref([]);
 const topics = ref([]);
-const imageFiles = ref([]); // 儲存圖片文件
+const imageFiles = ref([]); 
 let blockId = 0;
+const route = useRoute();
+const articleId = computed(() => route.params.id);
+
+async function initArticleInfo(articleId) {
+  if (!articleId) {
+    console.log('新建文章模式');
+    return; 
+  }
+
+  try {
+    console.log('加载文章 ID:', articleId);
+    const res = await ArticleService.getArticleData(articleId);
+    
+    // ✅ 处理数组/对象
+    const article = Array.isArray(res) ? res[0] : res;
+    
+    title.value = article.title || '';
+    articleType.value = article.articleType || '';
+    topics.value = article.topics || [];
+    blocks.value = article.blocks.map(block => ({
+      id: blockId++,
+      type: block.type,
+      content: block.content,
+      url: block.type === 'image' ? block.content : ''
+    }));
+    
+    console.log('✅ 初始化成功:', article.title);
+  } catch (error) {
+    console.error('加载文章失败:', error);
+    ElMessage.error('加载文章失败，请重试');
+  }
+}
+
+onMounted( async () => {
+  initArticleInfo(articleId.value);
+});
 
 const topicOptions = ref(["美食", "旅遊", "學習", "生活", "科技"]);
 
@@ -133,12 +170,14 @@ const saveContent = async () => {
 
   const loading = ElLoading.service({
     lock: true,
-    text: '正在保存文章...',
+    text: articleId.value ? '正在更新文章...' : '正在保存文章...',
     background: 'rgba(0, 0, 0, 0.7)',
   });
 
   try {
     const data = {
+      // ✅ 编辑模式：添加 id
+      ...(articleId.value && { id: parseInt(articleId.value) }),
       userId: parseInt(userId),
       title: title.value,
       articleType: articleType.value,
@@ -156,15 +195,13 @@ const saveContent = async () => {
 
     const formData = new FormData();
     formData.append('article', new Blob([JSON.stringify(data)], { type: 'application/json' }));
-    imageFiles.value.forEach((file, index) => {
-      if (file) {
-        formData.append('images', file);
-      }
+    imageFiles.value.forEach((file) => {
+      if (file) formData.append('images', file);
     });
 
-    // 直接调用 API 服务，不需要再处理 response
+    // ✅ 后端 putArticleData 自动判断：有id=更新，无id=新建
     const result = await ArticleService.putArticleData(formData);
-    ElMessage.success('文章保存成功！');
+    ElMessage.success(articleId.value ? '文章更新成功！' : '文章保存成功！');
     console.log('保存成功:', result);
   } catch (error) {
     console.error('保存失敗:', error.message);

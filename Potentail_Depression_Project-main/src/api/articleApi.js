@@ -36,7 +36,7 @@ export default class ArticleService {
 
 
     static async putArticleData(formData) {
-        const response = await fetch(`${this.BASE_URL}/putArticleData`, {
+        const response = await fetch(`/${this.BASE_URL}/putArticleData`, {
             method: "POST",
             body: formData
         });
@@ -54,6 +54,11 @@ export default class ArticleService {
         return response.json();
     }
 
+    /**
+     * 获取某篇文章详情数据
+     * @param {} articleId 
+     * @returns 
+     */
     static async getArticleData(articleId) {
         const response = await fetch(`/${this.BASE_URL}/getDataInfoByArticleId?articleId=${articleId}`, {
             method: 'GET',

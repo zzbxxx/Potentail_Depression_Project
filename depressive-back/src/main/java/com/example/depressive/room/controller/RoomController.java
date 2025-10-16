@@ -2,13 +2,19 @@ package com.example.depressive.room.controller;
 
 import com.example.depressive.room.dto.RoomReq;
 import com.example.depressive.room.dto.RoomResp;
+import com.example.depressive.room.entity.Room;
+import com.example.depressive.room.repository.RoomRepository;
 import com.example.depressive.room.service.RoomService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 
 @RestController
 @RequestMapping("/api/rooms")
@@ -17,6 +23,12 @@ public class RoomController {
 
     @Autowired
     private RoomService roomService;
+
+    @Autowired
+    private RoomRepository roomRepository;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     @PostMapping("/createRoom")
     public ResponseEntity<Map<String, Object>> createRoom(@RequestBody RoomReq roomReq) {
@@ -160,6 +172,60 @@ public class RoomController {
             response.put("success", false);
             response.put("message", "服務器錯誤: " + e.getMessage());
             return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @PutMapping("/{roomId}/avatar")
+    public ResponseEntity<Map<String, Object>> updateRoomAvatar(
+            @PathVariable Long roomId,
+            @RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Long userId = Long.valueOf(request.get("userId").toString());
+            String avatar = (String) request.get("avatar");
+
+            RoomResp roomResp = roomService.updateRoomAvatar(roomId, userId, avatar);
+            response.put("success", true);
+            response.put("message", "房間頭像更新成功");
+            response.put("data", roomResp);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            response.put("success", false);
+            response.put("message", "更新頭像失敗: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "服務器錯誤: " + e.getMessage());
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+
+    @PutMapping("/{roomId}/userState")
+    public ResponseEntity<Map<String, Object>> updateUserState(@PathVariable Long roomId, @RequestBody Map<String, Object> request) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Long userId = Long.valueOf(request.get("userId").toString());
+            String status = (String) request.get("status");
+            String message = (String) request.get("message");
+            int timer = Integer.parseInt(request.get("timer").toString());
+
+            roomService.updateUserState(roomId, userId, status, message, timer);
+            response.put("success", true);
+            response.put("message", "狀態更新成功");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "更新失敗: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    @Scheduled(fixedRate = 30000) // 每 30 秒執行一次
+    public void syncRoomStates() throws JsonProcessingException {
+        List<Room> activeRooms = roomRepository.findByStatus(Room.RoomStatus.active);
+        for (Room room : activeRooms) {
+            ResponseEntity<Map<String, Object>> roomResp = getRoomById(room.getId());
+            messagingTemplate.convertAndSend("/topic/room/" + room.getId() + "/fullUpdate", roomResp);
         }
     }
 }

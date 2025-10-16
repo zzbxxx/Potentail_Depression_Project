@@ -4,6 +4,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 @Getter
@@ -22,4 +24,5 @@ public class RoomResp {
     private LocalDateTime createdAt;
     private LocalDateTime endTime;
     private String avatar;
+    private List<Map<String, Object>> users;
 }

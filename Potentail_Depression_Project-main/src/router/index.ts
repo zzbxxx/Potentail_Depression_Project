@@ -4,7 +4,7 @@ import MainPage from '../views/MainPage.vue'
 import MoodLog from '../views/MoodLog.vue'
 import PersonalCenter from '../views/PersonalCenter.vue'
 import NotFound from '../views/MessageCode/NotFound404.vue'
-import Editror from '../views/Editor.vue'
+import Editor from '../views/Editor.vue'
 import DetailPage from '../views/DetailPage.vue'
 import StudyRoomPage from '../views/StudyRoomPage.vue'
 import UserDetailPage from '../views/UserDetailPage.vue'
@@ -31,9 +31,9 @@ const routes = [
         meta: { requiresAuth: true }
     },
     {
-        path: '/editor',
-        name: 'Editror',
-        component: Editror,
+        path: '/editor/:id?',
+        name: 'Editor',
+        component: Editor,
         meta: { requiresAuth: true }
     },
     {
